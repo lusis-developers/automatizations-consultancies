@@ -1,8 +1,9 @@
 import mongoose, { Model, Schema } from 'mongoose'
 
-// Definimos la interfaz para el cliente
 interface IClient {
   name: string
+  email: string
+  phone: string
   country: string
   city: string
   dateOfBirth: Date
@@ -13,12 +14,25 @@ interface IClient {
   paymentInfo: {
     preferredMethod: string
     lastPaymentDate: Date
+    cardType?: string
+    cardInfo?: string
+    bank?: string
   }
 }
 
 const ClientSchema: Schema<IClient> = new Schema(
   {
     name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    phone: {
       type: String,
       required: true,
       trim: true
@@ -55,6 +69,18 @@ const ClientSchema: Schema<IClient> = new Schema(
       },
       lastPaymentDate: {
         type: Date,
+        default: null
+      },
+      cardType: {
+        type: String,
+        default: null
+      },
+      cardInfo: {
+        type: String,
+        default: null
+      },
+      bank: {
+        type: String,
         default: null
       }
     }

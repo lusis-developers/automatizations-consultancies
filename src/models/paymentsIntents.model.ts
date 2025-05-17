@@ -1,8 +1,9 @@
 import { Schema, model, Document } from "mongoose";
+import { PaymentStatus } from '../enums/paymentStatus.enum'
 
 export interface IPaymentIntent extends Document {
     intentId: string;
-    status: "pending" | "paid" | "failed";
+    state: PaymentStatus;
     email?: string;
     name?: string;
     phone?: string;
@@ -19,10 +20,10 @@ export interface IPaymentIntent extends Document {
 const PaymentIntentSchema = new Schema<IPaymentIntent>(
     {
         intentId: { type: String, required: true, unique: true },
-        status: {
+        state: {
             type: String,
-            enum: ["pending", "paid", "failed"],
-            default: "pending",
+            enum: Object.values(PaymentStatus),
+            default: PaymentStatus.PENDING,
         },
         email: { type: String },
         name: { type: String },
