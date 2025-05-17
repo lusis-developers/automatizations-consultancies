@@ -1,8 +1,11 @@
 import * as dotenv from 'dotenv'
 import createApp from './app'
+import dbConnect from './config/mongo'
 
 async function main () {
   dotenv.config()
+
+  await dbConnect()
 
   const { app, server } = createApp()
 

@@ -1,8 +1,11 @@
 import express from 'express'
-import { receivePaymentController } from '../controllers/payments/receivePayment.controller'
+import { generatePagopluxPaymentLinkController, receivePaymentController } from '../controllers/payments.controllers'
+
 
 const router = express.Router()
 
+
+router.post('/pagoplux/generate-payment-link', generatePagopluxPaymentLinkController)
 
 router.post('/webhook/receive-payment', receivePaymentController)
 
