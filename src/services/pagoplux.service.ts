@@ -27,7 +27,8 @@ export class PagoPluxService {
     phone: string,
     prefix: string = '+593',
     address: string = 'Address not specified',
-    idNumber: string = 'consumidor final'
+    idNumber: string = 'consumidor final',
+    extras?: string
   ): Promise<string> {
     try {
       const body = {
@@ -43,7 +44,8 @@ export class PagoPluxService {
         correoCliente: customerEmail,
         direccion: address,
         telefono: phone,
-        prefijo: prefix
+        prefijo: prefix,
+        ...(extras ? { extras } : {})
       }
 
       const response = await axios.post(this.endpoint, body, {
