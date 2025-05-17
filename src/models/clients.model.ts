@@ -18,6 +18,7 @@ interface IClient {
     cardInfo?: string
     bank?: string
   }
+  transactions: Schema.Types.ObjectId[]
 }
 
 const ClientSchema: Schema<IClient> = new Schema(
@@ -83,7 +84,11 @@ const ClientSchema: Schema<IClient> = new Schema(
         type: String,
         default: null
       }
-    }
+    },
+    transactions: [{
+      type: Schema.Types.ObjectId,
+      ref: 'transactions'
+    }]
   },
   {
     timestamps: true,

@@ -113,36 +113,66 @@ export async function receivePaymentController(req: Request, res: Response): Pro
       telefono: intent.phone
     })
     
-    const cliente = await models.clients.create({
-      name: body.clientName,
-      email: intent.email,
-      phone: intent.phone,
-      dateOfBirth: new Date(),
-      city: 'No especificada',
-      country: 'Ecuador',
-      paymentInfo: {
-        preferredMethod: body.typePayment,
-        lastPaymentDate: new Date(),
-        cardType: body.cardType,
-        cardInfo: body.cardInfo,
-        bank: body.bank
-      },
-      createdAt: new Date()
-    })
-    console.log('[Webhook - Cliente Creado]', cliente)
-
-    // Actualizamos intento
-    console.log('[Webhook - Actualizando Intento]', {
-      intentId,
-      transactionId: body.id_transaccion,
-      userId: cliente._id
-    })
+    // Buscamos cliente existente o creamos uno nuevo
+    let cliente = await models.clients.findOne({ email: intent.email })
     
+    if (!cliente) {
+      // Si no existe el cliente, lo creamos
+      cliente = await models.clients.create({
+        name: body.clientName,
+        email: intent.email,
+        phone: intent.phone,
+        dateOfBirth: new Date(),
+        city: 'No especificada',
+        country: 'Ecuador',
+        paymentInfo: {
+          preferredMethod: body.typePayment,
+          lastPaymentDate: new Date(),
+          cardType: body.cardType,
+          cardInfo: body.cardInfo,
+          bank: body.bank
+        },
+        transactions: []
+      })
+    }
+
+    // Creamos la transacción
+    const transaction = await models.transactions.create({
+      transactionId: body.id_transaccion,
+      intentId: intentId,
+      amount: parseFloat(body.amount),
+      paymentMethod: body.typePayment,
+      cardInfo: body.cardInfo,
+      cardType: body.cardType,
+      bank: body.bank,
+      date: new Date(),
+      description: intent.description,
+      clientId: cliente._id
+    })
+
+    // Actualizamos el cliente con la referencia de la transacción
+    await models.clients.updateOne(
+      { _id: cliente._id },
+      {
+        $push: {
+          transactions: transaction._id
+        },
+        $set: {
+          'paymentInfo.lastPaymentDate': new Date(),
+          'paymentInfo.preferredMethod': body.typePayment,
+          'paymentInfo.cardType': body.cardType,
+          'paymentInfo.cardInfo': body.cardInfo,
+          'paymentInfo.bank': body.bank
+        }
+      }
+    )
+
+    // Actualizamos intento de pago
     await models.paymentsIntents.updateOne(
       { intentId },
       {
         $set: {
-          status: 'paid',
+          state: PaymentStatus.PAID,
           transactionId: body.id_transaccion,
           paidAt: new Date(),
           userId: cliente._id
@@ -151,7 +181,7 @@ export async function receivePaymentController(req: Request, res: Response): Pro
     )
 
     console.log('[Webhook - Proceso Completado]', `IntentId: ${intentId}`)
-    res.status(200).json({ message: 'Cliente creado y pago registrado exitosamente' })
+    res.status(200).json({ message: 'Pago registrado exitosamente' })
 
   } catch (error: unknown) {
     console.error('[Webhook - Error Fatal]', error)
