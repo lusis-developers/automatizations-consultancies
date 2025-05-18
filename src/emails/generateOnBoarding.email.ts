@@ -16,7 +16,8 @@ export async function generateOnBoardingEmail(email: string, name: string, busin
               <!-- HEADER -->
               <tr>
                 <td align="center" style="padding: 20px 40px 0 40px;">
-                  <h1 style="margin: 0; font-size: 28px; color: #e6285c;">¡Bienvenido a Bakano, ${name}!</h1>
+                  <h1 style="margin: 0; font-size: 28px; color: #e6285c;">¡Gracias por unirte a nosotros!</h1>
+                  <h2 style="margin: 10px 0 0 0; font-size: 20px; color: #191423;">Empecemos a transformar tu negocio gastronómico</h2>
                 </td>
               </tr>
 
@@ -25,21 +26,25 @@ export async function generateOnBoardingEmail(email: string, name: string, busin
                 <td style="padding: 20px 40px 40px 40px;">
                   <p style="font-size: 16px; color: #191423;">Hola <strong>${name}</strong>,</p>
                   <p style="font-size: 16px; color: #191423;">
-                    Tu pago ha sido confirmado y ahora comenzamos el proceso de onboarding para <strong>${businessName}</strong>. 🚀
+                    ¡Gracias por confiar en nosotros para llevar tu negocio gastronómico al siguiente nivel! Estamos entusiasmados de empezar a trabajar contigo.
                   </p>
                   <p style="font-size: 16px; color: #191423;">
-                    En breve recibirás:
+                    Recuerda que juntos analizaremos los datos y estrategias de tu negocio para que empieces a crecer con control y previsión.
+                  </p>
+                  <p style="font-size: 16px; color: #191423;">
+                    Por cierto, te confirmamos que el pago ha sido exitosamente realizado.
+                  </p>
+                  <p style="font-size: 16px; color: #191423;">
+                    Ahora te comento tus siguientes pasos:
                   </p>
                   <ul style="font-size: 16px; color: #191423;">
-                    <li>✅ Acceso a tu panel personalizado</li>
-                    <li>✅ Invitación a la reunión de Kick-off</li>
-                    <li>✅ Documentación y primeros pasos</li>
+                    <li>✅ Recopilación y Análisis de Datos Clave de tu Negocio y objetivos</li>
+                    <li>✅ Sesión Inicial Estratégica para Profundizar en tus Objetivos (Sesión de KickOff)</li>
+                    <li>✅ Investigación y análisis de la información requerida</li>
+                    <li>✅ Implementación y Seguimiento Continuo para Resultados Medibles</li>
                   </ul>
-                  <p style="font-size: 16px; color: #191423;">
-                    Si tienes dudas o necesitas soporte, nuestro equipo está listo para ayudarte.
-                  </p>
-                  <p style="font-size: 16px; color: #85529c; font-style: italic;">
-                    — Bakano Team 💥
+                  <p style="text-align: center; margin-top: 30px;">
+                    <a href="#" style="background-color: #e6285c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">¡Haz click aquí para comenzar!</a>
                   </p>
                 </td>
               </tr>
