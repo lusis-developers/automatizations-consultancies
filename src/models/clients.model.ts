@@ -7,10 +7,7 @@ interface IClient {
   country: string
   city: string
   dateOfBirth: Date
-  businesses: [{
-    name: string
-    isMain: boolean
-  }]
+  businesses: Schema.Types.ObjectId[] // Cambiado a array de referencias
   paymentInfo: {
     preferredMethod: string
     lastPaymentDate: Date
@@ -53,15 +50,8 @@ const ClientSchema: Schema<IClient> = new Schema(
       required: true
     },
     businesses: [{
-      name: {
-        type: String,
-        required: true,
-        trim: true
-      },
-      isMain: {
-        type: Boolean,
-        default: false
-      }
+      type: Schema.Types.ObjectId,
+      ref: 'business'
     }],
     paymentInfo: {
       preferredMethod: {
