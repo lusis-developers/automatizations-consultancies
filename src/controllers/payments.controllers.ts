@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid'
 import models from '../models'
 import { IPagopluxWebhookResponse } from '../types/pagoplux.types'
 import { PaymentStatus } from '../enums/paymentStatus.enum'
+import ResendEmail from '../services/resend.service'
+import { generateOnBoardingEmail } from '../emails/generateOnBoarding.email'
 
 export async function generatePagopluxPaymentLinkController(req: Request, res: Response): Promise<void> {
   try {
@@ -212,6 +214,23 @@ export async function receivePaymentController(req: Request, res: Response): Pro
         }
       }
     )
+
+    // Después de crear el negocio y antes de la respuesta final
+    if (isFirstPayment) {
+      try {
+        const resendService = new ResendEmail()
+        await resendService.sendOnboardingEmail(
+          intent.email!,
+          cliente.name,
+          intent.businessName
+        )
+        
+        console.log('[Webhook - Email de Onboarding Enviado]', `Cliente: ${cliente.name}`)
+      } catch (emailError) {
+        console.error('[Webhook - Error al enviar email]', emailError)
+        // No interrumpimos el flujo si falla el envío del correo
+      }
+    }
 
     // Preparamos el mensaje de respuesta según si es primer pago o no
     const responseMessage = isFirstPayment
