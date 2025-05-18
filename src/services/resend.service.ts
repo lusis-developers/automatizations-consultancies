@@ -30,7 +30,7 @@ class ResendEmail {
         to: email,
         from: 'bakano@bakano.ec',
         html: content,
-        subject: '¡Bienvenido a Bakano! 🚀'
+        subject: '¡Gracias por unirte a nosotros! Empecemos a transformar tu negocio gastronómico 🚀'
       })
 
       if (error) {
