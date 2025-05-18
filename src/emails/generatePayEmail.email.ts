@@ -9,7 +9,7 @@ export async function generatePaymentConfirmationEmail(email: string, name: stri
               <!-- LOGO -->
               <tr style="background-color: #191423;">
                 <td align="center" style="padding: 30px;">
-                  <img src="https://www.tusitio.com/logo-bakano.png" alt="Bakano Logo" width="150" style="display:block;"/>
+                  <img src="https://res.cloudinary.com/dpjzfua3n/image/upload/v1747532776/bakano-light_xvxdmc.png" 
                 </td>
               </tr>
 
