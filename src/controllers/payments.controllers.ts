@@ -230,6 +230,21 @@ export async function receivePaymentController(req: Request, res: Response): Pro
         console.error('[Webhook - Error al enviar email]', emailError)
         // No interrumpimos el flujo si falla el envío del correo
       }
+    } else {
+      // Enviamos el correo de confirmación de pago para pagos subsecuentes
+      try {
+        const resendService = new ResendEmail()
+        await resendService.sendPaymentConfirmationEmail(
+          intent.email!,
+          cliente.name,
+          intent.businessName
+        )
+        
+        console.log('[Webhook - Email de Confirmación de Pago Enviado]', `Cliente: ${cliente.name}`)
+      } catch (emailError) {
+        console.error('[Webhook - Error al enviar email de confirmación]', emailError)
+        // No interrumpimos el flujo si falla el envío del correo
+      }
     }
 
     // Preparamos el mensaje de respuesta según si es primer pago o no

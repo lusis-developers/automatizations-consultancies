@@ -3,6 +3,7 @@ import 'dotenv/config'
 import CustomError from '../errors/customError.error'
 import { Resend } from 'resend'
 import { generateOnBoardingEmail } from '../emails/generateOnBoarding.email'
+import { generatePaymentConfirmationEmail } from '../emails/generatePayEmail.email'
 
 class ResendEmail {
   private resend: Resend
@@ -39,6 +40,31 @@ class ResendEmail {
     } catch (error) {
       console.error('Resend email', error)
       throw new Error(`Problem sending onboarding email: ${error}`)
+    }
+  }
+
+  public async sendPaymentConfirmationEmail(
+    email: string,
+    name: string,
+    businessName: string
+  ): Promise<void> {
+    try {
+      const content = await generatePaymentConfirmationEmail(email, name, businessName)
+
+      const { data, error } = await this.resend.emails.send({
+        to: email,
+        from: 'bakano@bakano.ec',
+        html: content,
+        subject: '¡Pago recibido con éxito! 🎉'
+      })
+
+      if (error) {
+        console.error('error: ', error)
+        throw new CustomError('Problema al enviar email desde resend', 400, error)
+      }
+    } catch (error) {
+      console.error('Resend email', error)
+      throw new Error(`Problema al enviar email de confirmación de pago: ${error}`)
     }
   }
 }
