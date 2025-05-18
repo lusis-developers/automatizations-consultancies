@@ -39,7 +39,7 @@ export async function generateOnBoardingEmail(email: string, name: string, busin
                     Si tienes dudas o necesitas soporte, nuestro equipo está listo para ayudarte.
                   </p>
                   <p style="font-size: 16px; color: #85529c; font-style: italic;">
-                    — El equipo de Bakano 💥
+                    — Bakano Team 💥
                   </p>
                 </td>
               </tr>

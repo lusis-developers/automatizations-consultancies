@@ -36,7 +36,7 @@ export async function generatePaymentConfirmationEmail(email: string, name: stri
                   <p style="font-size: 16px; color: #85529c; font-style: italic;">
                     ¡Seguimos construyendo juntos grandes resultados!
                   </p>
-                  <p style="font-size: 16px; color: #85529c; font-style: italic;">— El equipo de Bakano 💥</p>
+                  <p style="font-size: 16px; color: #85529c; font-style: italic;">— Bakano Team 💥</p>
                 </td>
               </tr>
 
