@@ -15,6 +15,8 @@ export interface IPaymentIntent extends Document {
     createdAt: Date;
     paidAt?: Date;
     userId?: string;
+    businessName: string;  // Nuevo campo
+    businessId?: Schema.Types.ObjectId;  // Nuevo campo para la referencia
 }
 
 const PaymentIntentSchema = new Schema<IPaymentIntent>(
@@ -36,6 +38,8 @@ const PaymentIntentSchema = new Schema<IPaymentIntent>(
         userId: { type: String },
         createdAt: { type: Date, default: Date.now },
         paidAt: { type: Date },
+        businessName: { type: String, required: true },
+        businessId: { type: Schema.Types.ObjectId, ref: 'business' },
     },
     {
         timestamps: true,

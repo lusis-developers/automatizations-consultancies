@@ -15,10 +15,11 @@ export async function generatePagopluxPaymentLinkController(req: Request, res: R
       telefono,
       prefijo,
       direccion,
-      ci
+      ci,
+      nombreNegocio
     } = req.body
 
-    if (!monto || !descripcion || !nombreCliente || !correoCliente || !telefono) {
+    if (!monto || !descripcion || !nombreCliente || !correoCliente || !telefono || !nombreNegocio) {
       res.status(400).json({ message: 'Faltan campos obligatorios' })
       return
     }
@@ -32,7 +33,7 @@ export async function generatePagopluxPaymentLinkController(req: Request, res: R
       nombreCliente,
       correoCliente,
       telefono,
-      prefijo || '+593',
+      `+${prefijo}` || '+593',
       direccion || 'Sin dirección',
       ci || 'consumidor final',
       `intentId=${intentId}` // extras
@@ -40,14 +41,15 @@ export async function generatePagopluxPaymentLinkController(req: Request, res: R
 
     await models.paymentsIntents.create({
       intentId,
-      status: 'pending',
+      state: PaymentStatus.PENDING,
       email: correoCliente,
       name: nombreCliente,
       phone: telefono,
       amount: monto,
       description: descripcion,
       paymentLink: link,
-      createdAt: new Date()
+      createdAt: new Date(),
+      businessName: nombreNegocio // Solo guardamos el nombre del negocio
     })
 
     res.status(200).json({ url: link, intentId })
@@ -115,8 +117,10 @@ export async function receivePaymentController(req: Request, res: Response): Pro
     
     // Buscamos cliente existente o creamos uno nuevo
     let cliente = await models.clients.findOne({ email: intent.email })
+    let isFirstPayment = false
     
     if (!cliente) {
+      isFirstPayment = true
       // Si no existe el cliente, lo creamos
       cliente = await models.clients.create({
         name: body.clientName,
@@ -167,6 +171,34 @@ export async function receivePaymentController(req: Request, res: Response): Pro
       }
     )
 
+    // Después de crear el cliente y antes de actualizar el intento de pago
+    // Creamos el negocio si no existe y es el primer pago
+    let business = await models.business.findOne({ name: intent.businessName })
+    
+    if (!business && isFirstPayment) {
+      business = await models.business.create({
+        name: intent.businessName,
+        email: intent.email,
+        phone: intent.phone,
+        address: 'Sin dirección',
+        owner: cliente._id
+      })
+
+      // Actualizamos el cliente con la referencia al negocio
+      await models.clients.updateOne(
+        { _id: cliente._id },
+        {
+          $push: {
+            businesses: business._id
+          }
+        }
+      )
+
+      console.log('[Webhook - Nuevo Negocio Creado]', `Negocio: ${business.name}`)
+    } else if (business) {
+      console.log('[Webhook - Negocio Existente]', `Negocio: ${business.name}, Cliente: ${cliente.name}`)
+    }
+
     // Actualizamos intento de pago
     await models.paymentsIntents.updateOne(
       { intentId },
@@ -175,13 +207,22 @@ export async function receivePaymentController(req: Request, res: Response): Pro
           state: PaymentStatus.PAID,
           transactionId: body.id_transaccion,
           paidAt: new Date(),
-          userId: cliente._id
+          userId: cliente._id,
+          businessId: business?._id
         }
       }
     )
 
+    // Preparamos el mensaje de respuesta según si es primer pago o no
+    const responseMessage = isFirstPayment
+      ? 'Bienvenido! Tu primer pago ha sido registrado exitosamente. Te enviaremos la información de onboarding por correo.'
+      : `Gracias por tu pago adicional para ${intent.businessName}. La transacción ha sido registrada exitosamente.`
+
     console.log('[Webhook - Proceso Completado]', `IntentId: ${intentId}`)
-    res.status(200).json({ message: 'Pago registrado exitosamente' })
+    res.status(200).json({ 
+      message: responseMessage,
+      isFirstPayment
+    })
 
   } catch (error: unknown) {
     console.error('[Webhook - Error Fatal]', error)
