@@ -43,7 +43,7 @@ export async function generatePaymentConfirmationEmail(email: string, name: stri
               <!-- FOOTER -->
               <tr style="background-color: #191423;">
                 <td align="center" style="padding: 30px; color: #f5f5f5;">
-                  <p style="margin: 0; font-size: 14px;">¿Tienes preguntas? Escríbenos a <a href="mailto:hola@bakano.agency" style="color: #e6285c; text-decoration: none;">hola@bakano.agency</a></p>
+                  <p style="margin: 0; font-size: 14px;">¿Tienes preguntas? Escríbenos a <a href="mailto:dquimi@bakano.ec" style="color: #e6285c; text-decoration: none;">dquimi@bakano.ec</a></p>
                   <p style="margin: 20px 0 10px 0; font-size: 14px;">Síguenos en nuestras redes:</p>
                   <p style="margin: 0;">
                       <a href="https://www.instagram.com/bakano.ec/" style="margin: 0 10px;"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="Instagram" width="24"/></a>
