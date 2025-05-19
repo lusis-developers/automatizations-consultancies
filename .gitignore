@@ -142,6 +142,6 @@ dist
 .svelte-kit
 
 credentials
-pnpm-lock.yaml
+pnpm-lock****
 
 # End of https://www.toptal.com/developers/gitignore/api/node
