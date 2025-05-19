@@ -1,4 +1,4 @@
-export async function generateOnBoardingEmail(email: string, name: string, businessName: string): Promise<string> {
+export async function generateOnBoardingEmail(name: string, link: string): Promise<string> {
   const HtmlEmail = `
   <html>
     <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color: #ededed; color: #191423;">
@@ -43,8 +43,8 @@ export async function generateOnBoardingEmail(email: string, name: string, busin
                     <li>✅ Investigación y análisis de la información requerida</li>
                     <li>✅ Implementación y Seguimiento Continuo para Resultados Medibles</li>
                   </ul>
-                  <p style="text-align: center; margin-top: 30px;">
-                    <a href="#" style="background-color: #e6285c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">¡Haz click aquí para comenzar!</a>
+                 <p style="text-align: center; margin-top: 30px;">
+                    <a href="${link}" style="background-color: #e6285c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">¡Haz click aquí para comenzar!</a>
                   </p>
                 </td>
               </tr>

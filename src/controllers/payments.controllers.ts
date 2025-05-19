@@ -2,10 +2,8 @@ import type { Request, Response } from 'express'
 import { PagoPluxService } from '../services/pagoplux.service'
 import { v4 as uuidv4 } from 'uuid'
 import models from '../models'
-import { IPagopluxWebhookResponse } from '../types/pagoplux.types'
 import { PaymentStatus } from '../enums/paymentStatus.enum'
 import ResendEmail from '../services/resend.service'
-import { generateOnBoardingEmail } from '../emails/generateOnBoarding.email'
 
 export async function generatePagopluxPaymentLinkController(req: Request, res: Response): Promise<void> {
   try {
@@ -158,7 +156,8 @@ export async function receivePaymentController(req: Request, res: Response): Pro
           await resendService.sendOnboardingEmail(
             body.email,
             body.clientName,
-            body.businessName
+            cliente.id,
+            business?.id
           )
           console.log('[Transfer - Email de Onboarding Enviado]', `Cliente: ${body.clientName}`)
         } else {
@@ -337,7 +336,8 @@ export async function receivePaymentController(req: Request, res: Response): Pro
         await resendService.sendOnboardingEmail(
           intent.email!,
           cliente.name,
-          intent.businessName
+          cliente.id,
+          business?.id
         )
         
         console.log('[Webhook - Email de Onboarding Enviado]', `Cliente: ${cliente.name}`)

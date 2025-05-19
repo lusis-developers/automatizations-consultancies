@@ -21,25 +21,26 @@ class ResendEmail {
   public async sendOnboardingEmail(
     email: string,
     name: string,
-    businessName: string
+    userId: string,
+    businessId: string
   ): Promise<void> {
     try {
-      const content = await generateOnBoardingEmail(email, name, businessName)
-
+      const link = `https://${process.env.FRONTEND_URL}/${userId}/${businessId}`;
+      console.log('link: ', link); // Agrega este log para verificar el valor del enlace
+      const content = await generateOnBoardingEmail(name, link);
+  
       const { data, error } = await this.resend.emails.send({
         to: email,
         from: 'bakano@bakano.ec',
         html: content,
         subject: '¡Gracias por unirte a nosotros! Empecemos a transformar tu negocio gastronómico 🚀'
-      })
-
+      });
+  
       if (error) {
-        console.error('error: ', error)
-        throw new CustomError('Problem sending email from resend', 400, error)
+        throw new CustomError('Problem sending email from resend', 400, error);
       }
     } catch (error) {
-      console.error('Resend email', error)
-      throw new Error(`Problem sending onboarding email: ${error}`)
+      throw new Error(`Problem sending onboarding email: ${error}`);
     }
   }
 
