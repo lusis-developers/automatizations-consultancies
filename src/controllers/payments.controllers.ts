@@ -68,8 +68,122 @@ export async function generatePagopluxPaymentLinkController(req: Request, res: R
 
 export async function receivePaymentController(req: Request, res: Response): Promise<void> {
   try {
-    const body: IPagopluxWebhookResponse = req.body
+    const body = req.body
     console.log('[Webhook - Payload Recibido]', JSON.stringify(body, null, 2))
+
+    // Si es una transferencia directa, el body tendrá una estructura diferente
+    const isDirectTransfer = !body.extras && body.amount && body.clientName
+
+    if (isDirectTransfer) {
+      // Generamos un ID de transacción único para transferencias
+      const transactionId = `TRANSFER-${Date.now()}-${body.clientId?.slice(-4) || 'XXXX'}`
+      
+      // Buscamos cliente existente o creamos uno nuevo
+      let cliente = await models.clients.findOne({ email: body.email })
+      let isFirstPayment = false
+      
+      if (!cliente) {
+        isFirstPayment = true
+        cliente = await models.clients.create({
+          name: body.clientName,
+          email: body.email,
+          phone: body.phone,
+          dateOfBirth: new Date(),
+          city: 'No especificada',
+          country: body.country || 'No especificado', // Ahora el país es configurable
+          paymentInfo: {
+            preferredMethod: 'Transferencia Bancaria',
+            lastPaymentDate: new Date(),
+            cardType: 'N/A',
+            cardInfo: 'N/A',
+            bank: body.bank || 'No especificado'
+          },
+          transactions: []
+        })
+      }
+
+      // Creamos la transacción
+      const transaction = await models.transactions.create({
+        transactionId,
+        intentId: 'TRANSFER-MANUAL',
+        amount: parseFloat(body.amount),
+        paymentMethod: 'Transferencia Bancaria',
+        cardInfo: 'N/A',
+        cardType: 'N/A',
+        bank: body.bank || 'No especificado',
+        date: new Date(),
+        description: body.description,
+        clientId: cliente._id,
+        transferClientId: body.clientId // Guardamos la cédula del cliente
+      })
+
+      // Actualizamos el cliente con la referencia de la transacción
+      await models.clients.updateOne(
+        { _id: cliente._id },
+        {
+          $push: { transactions: transaction._id },
+          $set: {
+            'paymentInfo.lastPaymentDate': new Date(),
+            'paymentInfo.preferredMethod': 'Transferencia Bancaria',
+            'paymentInfo.bank': body.bank || 'No especificado'
+          }
+        }
+      )
+
+      // Manejamos la creación o actualización del negocio
+      let business = await models.business.findOne({ name: body.businessName })
+      
+      if (!business && isFirstPayment) {
+        business = await models.business.create({
+          name: body.businessName,
+          email: body.email,
+          phone: body.phone,
+          address: 'Sin dirección',
+          owner: cliente._id,
+          ruc: body.clientId || 'CONSUMIDOR-FINAL' // Agregamos el RUC usando el clientId o un valor por defecto
+        })
+      
+        await models.clients.updateOne(
+          { _id: cliente._id },
+          { $push: { businesses: business._id } }
+        )
+      
+        console.log('[Transfer - Nuevo Negocio Creado]', `Negocio: ${business.name}`)
+      }
+
+      // Enviamos el email correspondiente
+      try {
+        const resendService = new ResendEmail()
+        if (isFirstPayment) {
+          await resendService.sendOnboardingEmail(
+            body.email,
+            body.clientName,
+            body.businessName
+          )
+          console.log('[Transfer - Email de Onboarding Enviado]', `Cliente: ${body.clientName}`)
+        } else {
+          await resendService.sendPaymentConfirmationEmail(
+            body.email,
+            body.clientName,
+            body.businessName
+          )
+          console.log('[Transfer - Email de Confirmación Enviado]', `Cliente: ${body.clientName}`)
+        }
+      } catch (emailError) {
+        console.error('[Transfer - Error al enviar email]', emailError)
+      }
+
+      const responseMessage = isFirstPayment
+        ? 'Bienvenido! Tu primer pago ha sido registrado exitosamente. Te enviaremos la información de onboarding por correo.'
+        : `Gracias por tu pago adicional para ${body.businessName}. La transacción ha sido registrada exitosamente.`
+
+      res.status(200).json({ 
+        message: responseMessage,
+        isFirstPayment,
+        transactionId
+      })
+      return
+    }
 
     // Validamos estado del pago
     console.log('[Webhook - Validando Estado]', `Estado actual: ${body.state}`)
@@ -121,6 +235,7 @@ export async function receivePaymentController(req: Request, res: Response): Pro
     let cliente = await models.clients.findOne({ email: intent.email })
     let isFirstPayment = false
     
+    // Modificamos la creación del cliente para manejar transferencia
     if (!cliente) {
       isFirstPayment = true
       // Si no existe el cliente, lo creamos
@@ -130,27 +245,27 @@ export async function receivePaymentController(req: Request, res: Response): Pro
         phone: intent.phone,
         dateOfBirth: new Date(),
         city: 'No especificada',
-        country: 'Ecuador',
+        country: body.country || 'No especificado', // También actualizamos aquí
         paymentInfo: {
-          preferredMethod: body.typePayment,
+          preferredMethod: body.typePayment === 'TRANSFER' ? 'Transferencia Bancaria' : body.typePayment,
           lastPaymentDate: new Date(),
-          cardType: body.cardType,
-          cardInfo: body.cardInfo,
-          bank: body.bank
+          cardType: body.typePayment === 'TRANSFER' ? 'N/A' : body.cardType,
+          cardInfo: body.typePayment === 'TRANSFER' ? 'N/A' : body.cardInfo,
+          bank: body.bank || 'No especificado'
         },
         transactions: []
       })
     }
 
-    // Creamos la transacción
+    // Modificamos la creación de la transacción para manejar transferencia
     const transaction = await models.transactions.create({
       transactionId: body.id_transaccion,
       intentId: intentId,
       amount: parseFloat(body.amount),
-      paymentMethod: body.typePayment,
-      cardInfo: body.cardInfo,
-      cardType: body.cardType,
-      bank: body.bank,
+      paymentMethod: body.typePayment === 'TRANSFER' ? 'Transferencia Bancaria' : body.typePayment,
+      cardInfo: body.typePayment === 'TRANSFER' ? 'N/A' : body.cardInfo,
+      cardType: body.typePayment === 'TRANSFER' ? 'N/A' : body.cardType,
+      bank: body.bank || 'No especificado',
       date: new Date(),
       description: intent.description,
       clientId: cliente._id
@@ -165,10 +280,10 @@ export async function receivePaymentController(req: Request, res: Response): Pro
         },
         $set: {
           'paymentInfo.lastPaymentDate': new Date(),
-          'paymentInfo.preferredMethod': body.typePayment,
-          'paymentInfo.cardType': body.cardType,
-          'paymentInfo.cardInfo': body.cardInfo,
-          'paymentInfo.bank': body.bank
+          'paymentInfo.preferredMethod': body.typePayment === 'TRANSFER' ? 'Transferencia Bancaria' : body.typePayment,
+          'paymentInfo.cardType': body.typePayment === 'TRANSFER' ? 'N/A' : body.cardType,
+          'paymentInfo.cardInfo': body.typePayment === 'TRANSFER' ? 'N/A' : body.cardInfo,
+          'paymentInfo.bank': body.bank || 'No especificado'
         }
       }
     )
@@ -262,6 +377,8 @@ export async function receivePaymentController(req: Request, res: Response): Pro
     console.error('[Webhook - Error Fatal]', error)
     if (error instanceof Error) {
       res.status(500).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error desconocido' })
     }
   }
 }
