@@ -8,12 +8,9 @@ import { GoogleDriveService } from '../services/googleDrive.service'
 export async function receiveConsultancyData(req: Request, res: Response): Promise<void> {
   try {
     const {
-      name,
-      ruc,
       address,
       phone,
       email,
-      owner, 
       instagram,
       tiktok,
       empleados,
@@ -23,70 +20,67 @@ export async function receiveConsultancyData(req: Request, res: Response): Promi
       objetivoIdeal
     } = req.body;
 
+    const { businessId } = req.params;
+
     console.log('Datos recibidos:', req.body);
+    console.log('Business ID recibido:', businessId);
+
     const driveService = new GoogleDriveService(
       path.resolve(__dirname, '../credentials/bakano-mvp-generate-content-4618d04c0dde.json'),
       '1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL'
     );
-    console.log('Servicio de Google Drive creado');
 
     const files = req.files as Express.Multer.File[];
 
-    // Validar que el owner exista
-    const existingOwner = await models.clients.findById('682a53ba158f5d9ded002e2f');
-    if (!existingOwner) {
-      res.status(404).json({ message: 'Cliente (owner) no encontrado' });
+    const business = await models.business.findById(businessId);
+    if (!business) {
+      res.status(404).json({ message: 'Negocio no encontrado con ese ID' });
       return;
     }
 
-    const businessFolderId = await driveService.ensureSubfolder(name);
-
-    console.log('Archivos recibidos:', files);
-
+    const businessFolderId = await driveService.ensureSubfolder(business.name);
     const filePaths: { [key: string]: string } = {};
+
     if (Array.isArray(files)) {
       for (const file of files) {
         const fileName = `${Date.now()}-${file.originalname}`;
         const tempPath = path.join(os.tmpdir(), fileName);
-    
+
         fs.writeFileSync(tempPath, file.buffer);
-    
+
         const driveUrl = await driveService.uploadFileToSubfolder(tempPath, fileName, businessFolderId);
-    
-        // Asegurarse de usar el nombre original del campo de formulario como clave
+
         const fieldName = file.fieldname;
         filePaths[`${fieldName}Path`] = driveUrl;
-    
+
         fs.unlinkSync(tempPath);
       }
     }
-    
 
-    const newBusiness = new models.business({
-      name,
-      ruc,
-      address,
-      phone,
-      email,
-      owner,
-      instagram,
-      tiktok,
-      empleados,
-      ingresoMensual,
-      ingresoAnual,
-      desafioPrincipal,
-      objetivoIdeal,
-      ...filePaths
+    // Actualizar el negocio con los nuevos datos
+    business.instagram = instagram;
+    business.tiktok = tiktok;
+    business.empleados = empleados;
+    business.ingresoMensual = ingresoMensual;
+    business.ingresoAnual = ingresoAnual;
+    business.desafioPrincipal = desafioPrincipal;
+    business.objetivoIdeal = objetivoIdeal;
+    business.ruc = business.ruc;
+    business.address = address;
+    business.phone = phone;
+    business.email = email;
+    business.name = business.name;
+
+    // Añadir las rutas de archivos cargados
+    Object.entries(filePaths).forEach(([key, value]) => {
+      business.set(key, value);
     });
 
-    await newBusiness.save();
+    await business.save();
 
-    existingOwner.businesses.push(newBusiness.id);
-    await existingOwner.save();
-
-    res.status(201).json({
-      message: 'Datos de consultoría y archivos recibidos y guardados exitosamente',
-      businessId: newBusiness._id,
+    res.status(200).json({
+      message: 'Datos de consultoría actualizados correctamente',
+      businessId: business._id,
       filePaths
     });
 

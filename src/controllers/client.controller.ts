@@ -1,22 +1,28 @@
 import type { Request, Response } from 'express'
 import models from '../models'
 
-export async function getClient(req: Request, res: Response): Promise<void> {
+export async function getClientAndBusiness(req: Request, res: Response): Promise<void> {
   try {
-    console.log(req.params)
-    const { clientId } = req.params
-    console.log('clientId', clientId)
-    const client = await models.clients.findById(clientId)
+    const { clientId, businessId } = req.params;
 
+    const client = await models.clients.findById(clientId).populate('businesses');
     if (!client) {
-      res.status(404).send({ message: 'Client not found' })
-      return
+      res.status(404).json({ message: 'Cliente no encontrado' });
+      return;
     }
 
-    res.status(200).send(client)
+    const businessExists = client.businesses.some(
+      (b: any) => b._id.toString() === businessId
+    );
 
-    return
+    if (!businessExists) {
+      res.status(404).json({ message: 'Negocio no encontrado para este cliente' });
+      return;
+    }
+
+    res.status(200).json({ client });
   } catch (error) {
-    console.log(error)
+    console.error('Error al obtener cliente y negocio:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 }
