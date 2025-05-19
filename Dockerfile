@@ -26,6 +26,9 @@ COPY . .
 # Reconstruir sharp específicamente
 RUN pnpm add sharp@latest
 
+# Aumentar memoria disponible para node al compilar
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+
 # Construir la aplicación
 RUN pnpm run build
 
