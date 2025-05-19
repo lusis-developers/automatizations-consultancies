@@ -13,7 +13,8 @@ export default function createApp() {
   const server = http.createServer(app)
 
   const whitelist = [
-    'http://localhost:8100'
+    'http://localhost:8100',
+    'http://localhost:8080',
   ]
 
   app.use(cors({ origin: whitelist }))

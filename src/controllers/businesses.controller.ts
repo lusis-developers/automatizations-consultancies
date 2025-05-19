@@ -33,7 +33,7 @@ export async function receiveConsultancyData(req: Request, res: Response): Promi
     const files = req.files as Express.Multer.File[];
 
     // Validar que el owner exista
-    const existingOwner = await models.clients.findById(owner);
+    const existingOwner = await models.clients.findById('682a53ba158f5d9ded002e2f');
     if (!existingOwner) {
       res.status(404).json({ message: 'Cliente (owner) no encontrado' });
       return;
