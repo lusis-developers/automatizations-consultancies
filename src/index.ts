@@ -9,6 +9,8 @@ async function main () {
 
   const { app, server } = createApp()
 
+  server.timeout = 10 * 60 * 1000
+
   const port: number | string = process.env.PORT || 8100
 
   server.listen(port, () => {
