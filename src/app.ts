@@ -21,7 +21,7 @@ export default function createApp() {
 
   app.use(cors({ origin: whitelist }))
 
-  app.use(express.json())
+  app.use(express.json({limit: '50mb'}))
 
   app.get('/', (_req, res: Response) => {
     res.send('Automatizactions from bakano is aliveeee :)')
