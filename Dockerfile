@@ -17,23 +17,26 @@ RUN npm install -g pnpm
 # Copiar solo package.json primero
 COPY package.json ./
 
-# Instalar dependencias con pnpm
+# Instalar dependencias
 RUN pnpm install
 
 # Copiar el resto del código fuente
 COPY . .
 
-# Reconstruir sharp específicamente
+# Reconstruir sharp
 RUN pnpm add sharp@latest
 
-# Aumentar memoria disponible para node al compilar
+# Copiar credenciales a la ruta esperada por el código compilado
+COPY src/credentials ./dist/credentials
+
+# Aumentar memoria disponible para la compilación
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
-# Construir la aplicación
+# Compilar
 RUN pnpm run build
 
-# Exponer el puerto que utilizará la aplicación
+# Exponer puerto
 EXPOSE 8000
 
-# Comando para iniciar la aplicación
+# Comando para iniciar app
 CMD [ "node", "dist/index.js" ]
