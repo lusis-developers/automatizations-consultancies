@@ -19,7 +19,25 @@ export default function createApp() {
     'https://onboarding.bakano.ec'
   ]
 
-  app.use(cors({ origin: whitelist }))
+  
+  const corsOptions = {
+    origin: function (origin: any, callback: any) {
+      if (!origin || whitelist.includes(origin)) {
+        callback(null, true)
+      } else {
+        console.log(`❌ CORS bloqueado para: ${origin}`)
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
+    credentials: true
+  }
+
+  app.use(cors(corsOptions))
+
+  app.use((req, res, next) => {
+    console.log(`🌐 Petición desde: ${req.headers.origin}`);
+    next();
+  });
 
   app.use(express.json({limit: '50mb'}))
 
