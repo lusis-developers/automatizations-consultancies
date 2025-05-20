@@ -15,7 +15,8 @@ export default function createApp() {
   const whitelist = [
     'http://localhost:8100',
     'http://localhost:8080',
-    'https://onboarding-bakano.netlify.app'
+    'https://onboarding-bakano.netlify.app',
+    'https://onboarding.bakano.ec'
   ]
 
   app.use(cors({ origin: whitelist }))
