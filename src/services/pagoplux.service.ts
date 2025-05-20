@@ -8,6 +8,8 @@ export class PagoPluxService {
   private establishmentRuc: string = 'MDk5MzAyODQyODAwMQ==' // BASE64 de tu RUC: k3rTOL7NCbGULs2m2jK6a04SUg
   private clientToken: string = process.env.CLIENT_TOKEN || 'RzlNZlR6dzAwcEZBMlVBTDVpZ0lRaVA2NE46N3lVQ0lwYVBKZkpUODRNSlhib240SHNNbFEwejdXUXVEOTJWU0phMHM4S3Q4WlpW'
 
+  
+
   /**
    * Creates a unique payment link
    * @param amount Total amount to charge (with taxes)
@@ -54,6 +56,9 @@ export class PagoPluxService {
           'Authorization': `Basic ${this.clientToken}`
         }
       })
+
+      console.log('CLIENT_TOKEN: ', process.env.CLIENT_TOKEN)
+      console.log('PAGOPLUX_ENDPOINT: ', process.env.PAGOPLUX_ENDPOINT)
 
       if (response.data?.detail?.url) {
         return response.data.detail.url
