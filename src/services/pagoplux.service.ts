@@ -61,6 +61,7 @@ export class PagoPluxService {
         throw new Error(`Invalid response: ${JSON.stringify(response.data)}`)
       }
     } catch (error: any) {
+      console.error('Error creating payment link:', error)
       throw new Error(`Error creating payment link: ${error?.response?.data?.description || error.message}`)
     }
   }
