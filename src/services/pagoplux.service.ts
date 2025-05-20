@@ -49,6 +49,9 @@ export class PagoPluxService {
         prefijo: prefix,
         ...(extras ? { extras } : {})
       }
+      
+      console.log('CLIENT_TOKEN: ', process.env.CLIENT_TOKEN)
+      console.log('PAGOPLUX_ENDPOINT: ', process.env.PAGOPLUX_ENDPOINT)
 
       const response = await axios.post(this.endpoint, body, {
         headers: {
@@ -57,8 +60,6 @@ export class PagoPluxService {
         }
       })
 
-      console.log('CLIENT_TOKEN: ', process.env.CLIENT_TOKEN)
-      console.log('PAGOPLUX_ENDPOINT: ', process.env.PAGOPLUX_ENDPOINT)
 
       if (response.data?.detail?.url) {
         return response.data.detail.url
