@@ -1,11 +1,14 @@
-import type { Request, Response } from 'express'
-import models from '../models'
-import path from 'path'
-import fs from 'fs'
-import os from 'os'
-import { GoogleDriveService } from '../services/googleDrive.service'
+import type { Request, Response } from "express";
+import models from "../models";
+import path from "path";
+import fs from "fs";
+import os from "os";
+import { GoogleDriveService } from "../services/googleDrive.service";
 
-export async function receiveConsultancyData(req: Request, res: Response): Promise<void> {
+export async function receiveConsultancyData(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
     const {
       address,
@@ -17,24 +20,27 @@ export async function receiveConsultancyData(req: Request, res: Response): Promi
       ingresoMensual,
       ingresoAnual,
       desafioPrincipal,
-      objetivoIdeal
+      objetivoIdeal,
     } = req.body;
 
     const { businessId } = req.params;
 
-    console.log('Datos recibidos:', req.body);
-    console.log('Business ID recibido:', businessId);
+    console.log("Datos recibidos:", req.body);
+    console.log("Business ID recibido:", businessId);
 
     const driveService = new GoogleDriveService(
-      path.resolve(__dirname, '../credentials/bakano-mvp-generate-content-4618d04c0dde.json'),
-      '1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL'
+      path.resolve(
+        __dirname,
+        "../credentials/bakano-mvp-generate-content-4618d04c0dde.json",
+      ),
+      "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL",
     );
 
     const files = req.files as Express.Multer.File[];
 
     const business = await models.business.findById(businessId);
     if (!business) {
-      res.status(404).json({ message: 'Negocio no encontrado con ese ID' });
+      res.status(404).json({ message: "Negocio no encontrado con ese ID" });
       return;
     }
 
@@ -48,7 +54,11 @@ export async function receiveConsultancyData(req: Request, res: Response): Promi
 
         fs.writeFileSync(tempPath, file.buffer);
 
-        const driveUrl = await driveService.uploadFileToSubfolder(tempPath, fileName, businessFolderId);
+        const driveUrl = await driveService.uploadFileToSubfolder(
+          tempPath,
+          fileName,
+          businessFolderId,
+        );
 
         const fieldName = file.fieldname;
         filePaths[`${fieldName}Path`] = driveUrl;
@@ -79,13 +89,14 @@ export async function receiveConsultancyData(req: Request, res: Response): Promi
     await business.save();
 
     res.status(200).json({
-      message: 'Datos de consultoría actualizados correctamente',
+      message: "Datos de consultoría actualizados correctamente",
       businessId: business._id,
-      filePaths
+      filePaths,
     });
-
   } catch (error: any) {
-    console.error('Error al recibir datos de consultoría:', error);
-    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+    console.error("Error al recibir datos de consultoría:", error);
+    res
+      .status(500)
+      .json({ message: "Error interno del servidor", error: error.message });
   }
 }

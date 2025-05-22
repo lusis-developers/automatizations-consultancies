@@ -1,13 +1,13 @@
-import clients from './clients.model'
-import paymentsIntents from './paymentsIntents.model'
-import transactions from './transactions.model'
-import business from './business.model'
+import clients from "./clients.model";
+import paymentsIntents from "./paymentsIntents.model";
+import transactions from "./transactions.model";
+import business from "./business.model";
 
 const models = {
   clients,
   paymentsIntents,
   transactions,
-  business
-}
+  business,
+};
 
-export default models
+export default models;

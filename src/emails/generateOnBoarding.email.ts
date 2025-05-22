@@ -1,4 +1,7 @@
-export async function generateOnBoardingEmail(name: string, link: string): Promise<string> {
+export async function generateOnBoardingEmail(
+  name: string,
+  link: string,
+): Promise<string> {
   const HtmlEmail = `
   <html>
     <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color: #ededed; color: #191423;">

@@ -1,8 +1,8 @@
-import express from 'express'
-import { getClientAndBusiness } from '../controllers/client.controller'
+import express from "express";
+import { getClientAndBusiness } from "../controllers/client.controller";
 
-const router = express.Router()
+const router = express.Router();
 
-router.get('/client/:clientId/business/:businessId', getClientAndBusiness)
+router.get("/client/:clientId/business/:businessId", getClientAndBusiness);
 
-export default router
+export default router;

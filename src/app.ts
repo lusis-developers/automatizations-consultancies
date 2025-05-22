@@ -1,55 +1,52 @@
-import express from 'express'
-import type { Response } from 'express'
+import express from "express";
+import type { Response } from "express";
 
-import http from 'http'
-import cors from 'cors'
-import routerApi from './routes'
-import { globalErrorHandler } from './middlewares/globalErrorHandler.middleware'
-
+import http from "http";
+import cors from "cors";
+import routerApi from "./routes";
+import { globalErrorHandler } from "./middlewares/globalErrorHandler.middleware";
 
 export default function createApp() {
-  const app = express()
+  const app = express();
 
-  const server = http.createServer(app)
+  const server = http.createServer(app);
 
   const whitelist = [
-    'http://localhost:8100',
-    'http://localhost:8080',
-    'https://onboarding-bakano.netlify.app',
-    'https://onboarding.bakano.ec',
-    'http://localhost:5173'
-  ]
+    "http://localhost:8100",
+    "http://localhost:8080",
+    "https://onboarding-bakano.netlify.app",
+    "https://onboarding.bakano.ec",
+    "http://localhost:5173",
+  ];
 
-  
   const corsOptions = {
     origin: function (origin: any, callback: any) {
       if (!origin || whitelist.includes(origin)) {
-        callback(null, true)
+        callback(null, true);
       } else {
-        console.log(`❌ CORS bloqueado para: ${origin}`)
-        callback(new Error('Not allowed by CORS'))
+        console.log(`❌ CORS bloqueado para: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true
-  }
+    credentials: true,
+  };
 
-  app.use(cors(corsOptions))
+  app.use(cors(corsOptions));
 
   app.use((req, res, next) => {
     console.log(`🌐 Petición desde: ${req.headers.origin}`);
     next();
   });
 
-  app.use(express.json({limit: '50mb'}))
+  app.use(express.json({ limit: "50mb" }));
 
-  app.get('/', (_req, res: Response) => {
-    res.send('Automatizactions from bakano is aliveeee :)')
-  })
+  app.get("/", (_req, res: Response) => {
+    res.send("Automatizactions from bakano is aliveeee :)");
+  });
 
-  routerApi(app)
+  routerApi(app);
 
-  app.use(globalErrorHandler)
+  app.use(globalErrorHandler);
 
-  return { app, server }
-  
+  return { app, server };
 }

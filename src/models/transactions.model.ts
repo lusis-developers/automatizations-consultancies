@@ -18,49 +18,49 @@ const TransactionSchema = new Schema<ITransaction>(
     transactionId: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
     },
     intentId: {
       type: String,
-      required: true
+      required: true,
     },
     amount: {
       type: Number,
-      required: true
+      required: true,
     },
     paymentMethod: {
       type: String,
-      required: true
+      required: true,
     },
     cardInfo: {
-      type: String
+      type: String,
     },
     cardType: {
-      type: String
+      type: String,
     },
     bank: {
-      type: String
+      type: String,
     },
     date: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     description: {
       type: String,
-      required: true
+      required: true,
     },
     clientId: {
       type: Schema.Types.ObjectId,
-      ref: 'clients',
-      required: true
-    }
+      ref: "clients",
+      required: true,
+    },
   },
   {
     timestamps: true,
-    versionKey: false
-  }
+    versionKey: false,
+  },
 );
 
-const TransactionModel = model<ITransaction>('transactions', TransactionSchema);
+const TransactionModel = model<ITransaction>("transactions", TransactionSchema);
 
 export default TransactionModel;

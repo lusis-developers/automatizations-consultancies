@@ -1,35 +1,39 @@
-import { google } from 'googleapis'
-import path from 'path'
-import fs from 'fs'
+import { google } from "googleapis";
+import path from "path";
+import fs from "fs";
 
 export class GoogleDriveService {
   private driveClient: any;
 
-  constructor(credentialsPath: string, private parentFolderId: string) {
+  constructor(
+    credentialsPath: string,
+    private parentFolderId: string,
+  ) {
     const auth = new google.auth.GoogleAuth({
       keyFile: credentialsPath,
-      scopes: ['https://www.googleapis.com/auth/drive'],
+      scopes: ["https://www.googleapis.com/auth/drive"],
     });
 
-    this.driveClient = google.drive({ version: 'v3', auth });
+    this.driveClient = google.drive({ version: "v3", auth });
   }
 
   private getMimeType(fileName: string): string {
     const ext = path.extname(fileName).toLowerCase();
     const mimeTypes: { [key: string]: string } = {
-      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      '.xls': 'application/vnd.ms-excel',
-      '.csv': 'text/csv',
-      '.pdf': 'application/pdf',
+      ".xlsx":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".xls": "application/vnd.ms-excel",
+      ".csv": "text/csv",
+      ".pdf": "application/pdf",
     };
-    return mimeTypes[ext] || 'application/octet-stream';
+    return mimeTypes[ext] || "application/octet-stream";
   }
 
   async ensureSubfolder(name: string): Promise<string> {
     // Buscar si ya existe una carpeta con ese nombre dentro del folder principal
     const res = await this.driveClient.files.list({
       q: `'${this.parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${name}' and trashed = false`,
-      fields: 'files(id, name)',
+      fields: "files(id, name)",
     });
 
     if (res.data.files.length > 0) {
@@ -39,19 +43,23 @@ export class GoogleDriveService {
     // Si no existe, crearla
     const fileMetadata = {
       name,
-      mimeType: 'application/vnd.google-apps.folder',
+      mimeType: "application/vnd.google-apps.folder",
       parents: [this.parentFolderId],
     };
 
     const folder = await this.driveClient.files.create({
       requestBody: fileMetadata,
-      fields: 'id',
+      fields: "id",
     });
 
     return folder.data.id;
   }
 
-  async uploadFileToSubfolder(localFilePath: string, fileName: string, folderId: string): Promise<string> {
+  async uploadFileToSubfolder(
+    localFilePath: string,
+    fileName: string,
+    folderId: string,
+  ): Promise<string> {
     const fileMetadata = {
       name: fileName,
       parents: [folderId],
@@ -65,7 +73,7 @@ export class GoogleDriveService {
     const file = await this.driveClient.files.create({
       requestBody: fileMetadata,
       media,
-      fields: 'id',
+      fields: "id",
     });
 
     const fileId = file.data.id;
@@ -73,14 +81,14 @@ export class GoogleDriveService {
     await this.driveClient.permissions.create({
       fileId,
       requestBody: {
-        role: 'reader',
-        type: 'anyone',
+        role: "reader",
+        type: "anyone",
       },
     });
 
     const result = await this.driveClient.files.get({
       fileId,
-      fields: 'webViewLink',
+      fields: "webViewLink",
     });
 
     return result.data.webViewLink;

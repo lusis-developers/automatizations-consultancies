@@ -1,14 +1,16 @@
-import axios from 'axios'
-import dotenv from 'dotenv'
+import axios from "axios";
+import dotenv from "dotenv";
 
-dotenv.config()
+dotenv.config();
 
 export class PagoPluxService {
-  private endpoint: string = process.env.PAGOPLUX_ENDPOINT || 'https://api.pagoplux.com/intv1/integrations/createLinkFacturaResource'
-  private establishmentRuc: string = 'MDk5MzAyODQyODAwMQ==' // BASE64 de tu RUC: k3rTOL7NCbGULs2m2jK6a04SUg
-  private clientToken: string = process.env.CLIENT_TOKEN || 'RzlNZlR6dzAwcEZBMlVBTDVpZ0lRaVA2NE46N3lVQ0lwYVBKZkpUODRNSlhib240SHNNbFEwejdXUXVEOTJWU0phMHM4S3Q4WlpW'
-
-  
+  private endpoint: string =
+    process.env.PAGOPLUX_ENDPOINT ||
+    "https://api.pagoplux.com/intv1/integrations/createLinkFacturaResource";
+  private establishmentRuc: string = "MDk5MzAyODQyODAwMQ=="; // BASE64 de tu RUC: k3rTOL7NCbGULs2m2jK6a04SUg
+  private clientToken: string =
+    process.env.CLIENT_TOKEN ||
+    "RzlNZlR6dzAwcEZBMlVBTDVpZ0lRaVA2NE46N3lVQ0lwYVBKZkpUODRNSlhib240SHNNbFEwejdXUXVEOTJWU0phMHM4S3Q4WlpW";
 
   /**
    * Creates a unique payment link
@@ -27,10 +29,10 @@ export class PagoPluxService {
     customerName: string,
     customerEmail: string,
     phone: string,
-    prefix: string = '+593',
-    address: string = 'Address not specified',
-    idNumber: string = 'consumidor final',
-    extras?: string
+    prefix: string = "+593",
+    address: string = "Address not specified",
+    idNumber: string = "consumidor final",
+    extras?: string,
   ): Promise<string> {
     try {
       const body = {
@@ -47,25 +49,26 @@ export class PagoPluxService {
         direccion: address,
         telefono: phone,
         prefijo: prefix,
-        ...(extras ? { extras } : {})
-      }
+        ...(extras ? { extras } : {}),
+      };
 
       const response = await axios.post(this.endpoint, body, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${this.clientToken}`
-        }
-      })
-
+          "Content-Type": "application/json",
+          Authorization: `Basic ${this.clientToken}`,
+        },
+      });
 
       if (response.data?.detail?.url) {
-        return response.data.detail.url
+        return response.data.detail.url;
       } else {
-        throw new Error(`Invalid response: ${JSON.stringify(response.data)}`)
+        throw new Error(`Invalid response: ${JSON.stringify(response.data)}`);
       }
     } catch (error: any) {
-      console.error('Error creating payment link:', error)
-      throw new Error(`Error creating payment link: ${error?.response?.data?.description || error.message}`)
+      console.error("Error creating payment link:", error);
+      throw new Error(
+        `Error creating payment link: ${error?.response?.data?.description || error.message}`,
+      );
     }
   }
 }
