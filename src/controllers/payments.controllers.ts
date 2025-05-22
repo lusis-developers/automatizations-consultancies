@@ -171,3 +171,89 @@ export async function getPagopluxPaymentIntentsController(req: Request, res: Res
     res.status(500).send({ message })
   }
 }
+
+export async function getPaymentsSummaryController(req: Request, res: Response): Promise<void> {
+  try {
+    const [paymentIntents, transactions] = await Promise.all([
+      models.paymentsIntents.find({}),
+      models.transactions.find({})
+    ])
+
+    // Summary from intents
+    let totalIntents = paymentIntents.length
+    let totalIntentAmount = 0
+
+    let pendingCount = 0
+    let pendingAmount = 0
+
+    let paidCount = 0
+    let paidAmount = 0
+
+    for (const intent of paymentIntents) {
+      totalIntentAmount += intent.amount
+
+      if (intent.state === PaymentStatus.PENDING) {
+        pendingCount++
+        pendingAmount += intent.amount
+      } else if (intent.state === PaymentStatus.PAID) {
+        paidCount++
+        paidAmount += intent.amount
+      }
+    }
+
+    // Transactions grouped
+    let withIntentCount = 0
+    let withIntentAmount = 0
+
+    let directTransferCount = 0
+    let directTransferAmount = 0
+
+    const intentIdsSet = new Set(paymentIntents.map(i => i.intentId))
+
+    for (const tx of transactions) {
+      if (intentIdsSet.has(tx.intentId)) {
+        withIntentCount++
+        withIntentAmount += tx.amount
+      } else {
+        directTransferCount++
+        directTransferAmount += tx.amount
+      }
+    }
+
+    const totalTransactions = transactions.length
+    const totalPaidAmount = withIntentAmount + directTransferAmount
+
+    res.status(200).send({
+      summary: {
+        intents: {
+          totalCount: totalIntents,
+          totalAmount: totalIntentAmount,
+          pending: {
+            count: pendingCount,
+            amount: pendingAmount
+          },
+          paid: {
+            count: paidCount,
+            amount: paidAmount
+          }
+        },
+        confirmedPayments: {
+          total: totalTransactions,
+          totalPaidAmount,
+          withIntent: {
+            count: withIntentCount,
+            amount: withIntentAmount
+          },
+          directTransfer: {
+            count: directTransferCount,
+            amount: directTransferAmount
+          }
+        }
+      }
+    })
+  } catch (error: unknown) {
+    console.error('[Payments - Summary Error]', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    res.status(500).json({ message })
+  }
+}
