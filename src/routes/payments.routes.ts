@@ -1,12 +1,22 @@
-import express from 'express'
-import { generatePagopluxPaymentLinkController, receivePaymentController } from '../controllers/payments.controllers'
+import express from "express";
+import {
+	generatePagopluxPaymentLinkController,
+	receivePaymentController,
+	getTransactionsController,
+	getPagopluxPaymentIntentsController,
+} from "../controllers/payments.controllers";
 
+const router = express.Router();
 
-const router = express.Router()
+router.post(
+	"/pagoplux/generate-payment-link",
+	generatePagopluxPaymentLinkController
+);
 
+router.post("/webhook/receive-payment", receivePaymentController);
 
-router.post('/pagoplux/generate-payment-link', generatePagopluxPaymentLinkController)
+router.post("/transactions", getTransactionsController);
 
-router.post('/webhook/receive-payment', receivePaymentController)
+router.get("/pagoplux/payment-intents", getPagopluxPaymentIntentsController);
 
-export default router
+export default router;
