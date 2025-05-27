@@ -22,8 +22,10 @@ export default function createApp() {
 
   const corsOptions = {
     origin: function (origin: any, callback: any) {
-      console.log('🟡 Origin recibido:', origin)
-      if (!origin || whitelist.includes(origin)) {
+      const normalizedOrigin = origin?.replace(/\/$/, '');
+      console.log('🟡 Origin recibido:', origin);
+  
+      if (!origin || whitelist.includes(normalizedOrigin)) {
         callback(null, true);
       } else {
         console.log(`❌ CORS bloqueado para: ${origin}`);
@@ -32,6 +34,7 @@ export default function createApp() {
     },
     credentials: true,
   };
+  
 
   app.use(cors(corsOptions));
 
