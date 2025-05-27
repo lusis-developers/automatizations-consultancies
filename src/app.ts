@@ -22,6 +22,7 @@ export default function createApp() {
 
   const corsOptions = {
     origin: function (origin: any, callback: any) {
+      console.log('🟡 Origin recibido:', origin)
       if (!origin || whitelist.includes(origin)) {
         callback(null, true);
       } else {
