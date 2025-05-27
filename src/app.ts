@@ -17,6 +17,7 @@ export default function createApp() {
     "https://onboarding-bakano.netlify.app",
     "https://onboarding.bakano.ec",
     "http://localhost:5173",
+    "https://admin.bakano.ec"
   ];
 
   const corsOptions = {
