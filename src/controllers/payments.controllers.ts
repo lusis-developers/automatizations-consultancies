@@ -197,57 +197,75 @@ export async function getPaymentsSummaryController(
   res: Response,
 ): Promise<void> {
   try {
+    const { from, to } = req.query
+
+    const dateFilter: Record<string, any> = {}
+
+    if (from || to) {
+      dateFilter.createdAt = {}
+      if (from && !isNaN(Date.parse(from as string))) {
+        dateFilter.createdAt.$gte = new Date(from as string)
+      }
+      if (to && !isNaN(Date.parse(to as string))) {
+        dateFilter.createdAt.$lte = new Date(to as string)
+      }
+    }
+
     const [paymentIntents, transactions] = await Promise.all([
-      models.paymentsIntents.find({}),
-      models.transactions.find({}),
-    ]);
+      models.paymentsIntents.find(dateFilter),
+      models.transactions.find(dateFilter),
+    ])
 
     // Summary from intents
-    let totalIntents = paymentIntents.length;
-    let totalIntentAmount = 0;
+    let totalIntents = paymentIntents.length
+    let totalIntentAmount = 0
 
-    let pendingCount = 0;
-    let pendingAmount = 0;
+    let pendingCount = 0
+    let pendingAmount = 0
 
-    let paidCount = 0;
-    let paidAmount = 0;
+    let paidCount = 0
+    let paidAmount = 0
 
     for (const intent of paymentIntents) {
-      totalIntentAmount += intent.amount;
+      totalIntentAmount += intent.amount
 
       if (intent.state === PaymentStatus.PENDING) {
-        pendingCount++;
-        pendingAmount += intent.amount;
+        pendingCount++
+        pendingAmount += intent.amount
       } else if (intent.state === PaymentStatus.PAID) {
-        paidCount++;
-        paidAmount += intent.amount;
+        paidCount++
+        paidAmount += intent.amount
       }
     }
 
     // Transactions grouped
-    let withIntentCount = 0;
-    let withIntentAmount = 0;
+    let withIntentCount = 0
+    let withIntentAmount = 0
 
-    let directTransferCount = 0;
-    let directTransferAmount = 0;
+    let directTransferCount = 0
+    let directTransferAmount = 0
 
-    const intentIdsSet = new Set(paymentIntents.map((i) => i.intentId));
+    const intentIdsSet = new Set(paymentIntents.map((i) => i.intentId))
 
     for (const tx of transactions) {
       if (intentIdsSet.has(tx.intentId)) {
-        withIntentCount++;
-        withIntentAmount += tx.amount;
+        withIntentCount++
+        withIntentAmount += tx.amount
       } else {
-        directTransferCount++;
-        directTransferAmount += tx.amount;
+        directTransferCount++
+        directTransferAmount += tx.amount
       }
     }
 
-    const totalTransactions = transactions.length;
-    const totalPaidAmount = withIntentAmount + directTransferAmount;
+    const totalTransactions = transactions.length
+    const totalPaidAmount = withIntentAmount + directTransferAmount
 
     res.status(200).send({
       summary: {
+        dateRange: {
+          from: from || null,
+          to: to || null,
+        },
         intents: {
           totalCount: totalIntents,
           totalAmount: totalIntentAmount,
@@ -273,10 +291,10 @@ export async function getPaymentsSummaryController(
           },
         },
       },
-    });
+    })
   } catch (error: unknown) {
-    console.error("[Payments - Summary Error]", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json({ message });
+    console.error('[Payments - Summary Error]', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    res.status(500).json({ message })
   }
 }
