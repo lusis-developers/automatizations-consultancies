@@ -7,6 +7,7 @@ interface IClient {
   country: string;
   city: string;
   dateOfBirth: Date;
+  nationalIdentification?: string;
   businesses: Schema.Types.ObjectId[]; // Cambiado a array de referencias
   paymentInfo: {
     preferredMethod: string;
@@ -48,6 +49,10 @@ const ClientSchema: Schema<IClient> = new Schema(
     dateOfBirth: {
       type: Date,
       required: true,
+    },
+    nationalIdentification: { 
+      type: String, 
+      trim: true 
     },
     businesses: [
       {

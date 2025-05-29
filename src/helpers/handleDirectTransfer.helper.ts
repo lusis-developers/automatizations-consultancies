@@ -32,6 +32,7 @@ export async function handleDirectTransfer(
         phone: body.phone,
         dateOfBirth: new Date(), // valor temporal
         city: "No especificada",
+        nationalIdentification: body.clientId || "",
         country: body.country || "No especificado",
         paymentInfo: {
           preferredMethod: "Transferencia Bancaria",
@@ -44,6 +45,13 @@ export async function handleDirectTransfer(
       });
     }
 
+    if (cliente && !cliente.nationalIdentification && body.clientId) {
+      await models.clients.updateOne(
+        { _id: cliente._id },
+        { $set: { nationalIdentification: body.clientId } }
+      );
+    }
+    
     const transaction = await models.transactions.create({
       transactionId,
       intentId: "TRANSFER-MANUAL",

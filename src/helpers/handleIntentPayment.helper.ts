@@ -15,6 +15,7 @@ interface IntentPaymentBody {
   bank?: string;
   clientName: string;
   country?: string;
+  clientID?: string; 
 }
 
 export async function handleIntentPayment(
@@ -53,7 +54,7 @@ export async function handleIntentPayment(
     }
 
     console.log("[Webhook - Creando Cliente]", {
-      nombre: body.clientName,
+      nombre: intent.name,
       email: intent.email,
       telefono: intent.phone,
     });
@@ -64,12 +65,13 @@ export async function handleIntentPayment(
     if (!cliente) {
       isFirstPayment = true;
       cliente = await models.clients.create({
-        name: body.clientName,
+        name: intent.name || "Sin nombre",
         email: intent.email,
         phone: intent.phone,
         dateOfBirth: new Date(),
         city: "No especificada",
         country: body.country || "No especificado",
+        nationalIdentification: body.clientID || "",
         paymentInfo: {
           preferredMethod:
             body.typePayment === "TRANSFER"
@@ -83,6 +85,13 @@ export async function handleIntentPayment(
         transactions: [],
       });
     }
+
+    if (cliente && !cliente.nationalIdentification && body.clientID) {
+      await models.clients.updateOne(
+        { _id: cliente._id },
+        { $set: { nationalIdentification: body.clientID } }
+      );
+    }    
 
     const transaction = await models.transactions.create({
       transactionId: body.id_transaccion,
