@@ -22,6 +22,8 @@ export interface IBusiness extends Document {
   ventasClientePath?: string; // Para almacenar la ruta del archivo
   ventasMovimientosPath?: string; // Para almacenar la ruta del archivo
   ventasProductosPath?: string; // Para almacenar la ruta del archivo
+  vendePorWhatsapp?: boolean;
+  gananciaWhatsapp?: string;
 }
 
 const BusinessSchema = new Schema<IBusiness>(
@@ -70,6 +72,8 @@ const BusinessSchema = new Schema<IBusiness>(
     ventasClientePath: { type: String, required: false }, // Campo para la ruta del archivo
     ventasMovimientosPath: { type: String, required: false }, // Campo para la ruta del archivo
     ventasProductosPath: { type: String, required: false }, // Campo para la ruta del archivo
+    vendePorWhatsapp: { type: Boolean, required: false, default: false },
+    gananciaWhatsapp: { type: String, required: false, trim: true },
   },
   {
     timestamps: true,

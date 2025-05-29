@@ -21,6 +21,8 @@ export async function receiveConsultancyData(
       ingresoAnual,
       desafioPrincipal,
       objetivoIdeal,
+      vendePorWhatsapp,
+      gananciaWhatsapp
     } = req.body;
 
     const { businessId } = req.params;
@@ -80,6 +82,8 @@ export async function receiveConsultancyData(
     business.phone = phone;
     business.email = email;
     business.name = business.name;
+    business.vendePorWhatsapp = vendePorWhatsapp;
+    business.gananciaWhatsapp = gananciaWhatsapp;
 
     // Añadir las rutas de archivos cargados
     Object.entries(filePaths).forEach(([key, value]) => {
