@@ -1,5 +1,5 @@
 import express from "express";
-import { receiveConsultancyData } from "../controllers/businesses.controller";
+import { editBusinessData, receiveConsultancyData } from "../controllers/businesses.controller";
 import { upload } from "../middlewares/upload.middleware";
 
 const router = express.Router();
@@ -9,5 +9,10 @@ router.post(
   upload.any(),
   receiveConsultancyData,
 );
+
+router.patch(
+  "business/edit/:businessId",
+  editBusinessData,
+)
 
 export default router;

@@ -1,9 +1,10 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import models from "../models";
 import path from "path";
 import fs from "fs";
 import os from "os";
 import { GoogleDriveService } from "../services/googleDrive.service";
+import { Types } from "mongoose";
 
 export async function receiveConsultancyData(
   req: Request,
@@ -102,5 +103,48 @@ export async function receiveConsultancyData(
     res
       .status(500)
       .json({ message: "Error interno del servidor", error: error.message });
+  }
+}
+
+/**
+ * Edita los datos de un negocio existente basado en su ID.
+ * Utiliza un método PATCH para actualizaciones parciales.
+ * @param req El objeto de solicitud de Express. Espera `businessId` en los parámetros y los datos a actualizar en el body.
+ * @param res El objeto de respuesta de Express.
+ * @param next La función de middleware para el manejo de errores.
+ */
+export async function editBusinessData(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { businessId } = req.params;
+    const updateData = req.body;
+
+    if (!Types.ObjectId.isValid(businessId)) {
+      res.status(400).json({ message: "El ID del negocio proporcionado no es válido." });
+      return;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ message: "No se proporcionaron datos para actualizar." });
+      return;
+    }
+
+    const updatedBusiness = await models.business.findByIdAndUpdate(
+      businessId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedBusiness) {
+      res.status(404).json({ message: "No se encontró un negocio con el ID proporcionado." });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Negocio actualizado exitosamente.",
+      data: updatedBusiness,
+    });
+
+  } catch (error: unknown) {
+    next(error);
   }
 }
