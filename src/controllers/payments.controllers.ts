@@ -3,8 +3,8 @@ import { PagoPluxService } from "../services/pagoplux.service";
 import { v4 as uuidv4 } from "uuid";
 import models from "../models";
 import { PaymentStatus } from "../enums/paymentStatus.enum";
-import { handleDirectTransfer } from "../helpers/handleDirectTransfer.helper";
 import { handleIntentPayment } from "../helpers/handleIntentPayment.helper";
+import { handleManualPayment } from "../helpers/handleManualPayment.helper";
 
 export async function generatePagopluxPaymentLinkController(
   req: Request,
@@ -84,7 +84,7 @@ export async function receivePaymentController(
     const isDirectTransfer = !body.extras && body.amount && body.clientName;
 
     if (isDirectTransfer) {
-      await handleDirectTransfer(body, res);
+      await handleManualPayment(body, res);
     } else {
       if (body.state !== PaymentStatus.PAID) {
         console.log("[Webhook - Estado Ignorado]", `Estado: ${body.state}`);

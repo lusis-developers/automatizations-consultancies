@@ -1,9 +1,17 @@
 import { Response } from "express";
 import { Types } from "mongoose";
-import models from "../models";
-import ResendEmail from "../services/resend.service";
+import models from "../models"; // Asegúrate que la ruta a tus modelos es correcta
+import ResendEmail from "../services/resend.service"; // Asegúrate que la ruta a tu servicio de email es correcta
 
-interface DirectTransferBody {
+// El enum de métodos de pago para mantener la consistencia
+export enum PayMethod {
+  PAGOPLUX = 'pagoplux',
+  BANK_TRANSFER = 'bank transfer',
+  DATIL = 'datil',
+}
+
+// La interfaz para el cuerpo de la solicitud de un pago manual
+export interface ManualPaymentBody {
   amount: string;
   clientName: string;
   clientId?: string;
@@ -11,16 +19,36 @@ interface DirectTransferBody {
   phone: string;
   description?: string;
   country?: string;
-  bank?: string;
+  bank?: string; // Por ejemplo: "DATIL", "Banco Pichincha", etc.
   businessName: string;
+  paymentMethod: PayMethod; // El campo clave para diferenciar el tipo de pago
 }
 
-export async function handleDirectTransfer(
-  body: DirectTransferBody,
+/**
+ * Maneja el registro de un pago manual, ya sea por Transferencia Bancaria o Dátil.
+ * Crea o actualiza clientes, negocios y transacciones.
+ * @param body El cuerpo de la solicitud con los datos del pago.
+ * @param res El objeto de respuesta de Express.
+ */
+export async function handleManualPayment(
+  body: ManualPaymentBody,
   res: Response,
 ): Promise<void> {
   try {
-    const transactionId = `TRANSFER-${Date.now()}-${body.clientId?.slice(-4) || "XXXX"}`;
+    // 1. Determina los textos y IDs basados en el método de pago
+    const paymentMethodString = body.paymentMethod === PayMethod.BANK_TRANSFER 
+      ? "Transferencia Bancaria" 
+      : "Dátil";
+      
+    const bankProvider = body.bank || "No especificado";
+    
+    const intentId = body.paymentMethod === PayMethod.BANK_TRANSFER 
+      ? "TRANSFER-MANUAL" 
+      : "DATIL-MANUAL";
+
+    const transactionId = `${intentId}-${Date.now()}-${body.clientId?.slice(-4) || "XXXX"}`;
+
+    // 2. Busca o crea el cliente
     let cliente = await models.clients.findOne({ email: body.email });
     let isFirstPayment = false;
 
@@ -30,21 +58,22 @@ export async function handleDirectTransfer(
         name: body.clientName,
         email: body.email,
         phone: body.phone,
-        dateOfBirth: new Date(), // valor temporal
+        dateOfBirth: new Date(),
         city: "No especificada",
         nationalIdentification: body.clientId || "",
         country: body.country || "No especificado",
         paymentInfo: {
-          preferredMethod: "Transferencia Bancaria",
+          preferredMethod: paymentMethodString,
           lastPaymentDate: new Date(),
           cardType: "N/A",
           cardInfo: "N/A",
-          bank: body.bank || "No especificado",
+          bank: bankProvider,
         },
         transactions: [],
       });
     }
 
+    // Actualiza la cédula/RUC si no existía
     if (cliente && !cliente.nationalIdentification && body.clientId) {
       await models.clients.updateOne(
         { _id: cliente._id },
@@ -52,34 +81,35 @@ export async function handleDirectTransfer(
       );
     }
     
+    // 3. Crea la transacción con los datos dinámicos
     const transaction = await models.transactions.create({
       transactionId,
-      intentId: "TRANSFER-MANUAL",
+      intentId,
       amount: parseFloat(body.amount),
-      paymentMethod: "Transferencia Bancaria",
+      paymentMethod: paymentMethodString,
       cardInfo: "N/A",
       cardType: "N/A",
-      bank: body.bank || "No especificado",
+      bank: bankProvider,
       date: new Date(),
       description: body.description,
       clientId: cliente._id,
-      transferClientId: body.clientId || "N/A",
     });
 
+    // 4. Actualiza el cliente con la nueva transacción y fecha de último pago
     await models.clients.updateOne(
       { _id: cliente._id },
       {
         $push: { transactions: transaction._id },
         $set: {
           "paymentInfo.lastPaymentDate": new Date(),
-          "paymentInfo.preferredMethod": "Transferencia Bancaria",
-          "paymentInfo.bank": body.bank || "No especificado",
+          "paymentInfo.preferredMethod": paymentMethodString,
+          "paymentInfo.bank": bankProvider,
         },
       },
     );
 
+    // 5. Lógica para crear un negocio si es el primer pago de un cliente nuevo
     let business = await models.business.findOne({ name: body.businessName });
-
     if (!business && isFirstPayment) {
       business = await models.business.create({
         name: body.businessName,
@@ -96,11 +126,12 @@ export async function handleDirectTransfer(
       );
 
       console.log(
-        "[Transfer - Nuevo Negocio Creado]",
+        "[Manual Payment - Nuevo Negocio Creado]",
         `Negocio: ${business.name}`,
       );
     }
 
+    // 6. Envío de correos electrónicos
     const resendService = new ResendEmail();
     try {
       if (isFirstPayment) {
@@ -111,7 +142,7 @@ export async function handleDirectTransfer(
           business?.id,
         );
         console.log(
-          "[Transfer - Email de Onboarding Enviado]",
+          "[Manual Payment - Email de Onboarding Enviado]",
           `Cliente: ${body.clientName}`,
         );
       } else {
@@ -121,27 +152,29 @@ export async function handleDirectTransfer(
           body.businessName,
         );
         console.log(
-          "[Transfer - Email de Confirmación Enviado]",
+          "[Manual Payment - Email de Confirmación Enviado]",
           `Cliente: ${body.clientName}`,
         );
       }
     } catch (emailError) {
-      console.error("[Transfer - Error al enviar email]", emailError);
+      console.error("[Manual Payment - Error al enviar email]", emailError);
     }
 
+    // 7. Envía la respuesta exitosa
     const responseMessage = isFirstPayment
-      ? "Bienvenido! Tu primer pago ha sido registrado exitosamente. Te enviaremos la información de onboarding por correo."
-      : `Gracias por tu pago adicional para ${body.businessName}. La transacción ha sido registrada exitosamente.`;
+      ? "¡Bienvenido! Tu primer pago ha sido registrado exitosamente. Te enviaremos la información de onboarding por correo."
+      : `Gracias por tu pago para ${body.businessName}. La transacción ha sido registrada exitosamente.`;
 
     res.status(200).json({
       message: responseMessage,
       isFirstPayment,
       transactionId,
     });
+
   } catch (error) {
-    console.error("[Transfer - Error Interno]", error);
+    console.error("[Manual Payment - Error Interno]", error);
     res
       .status(500)
-      .json({ message: "Error procesando la transferencia directa" });
+      .json({ message: "Error procesando el pago manual" });
   }
 }
