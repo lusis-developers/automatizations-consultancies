@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import models from "../models";
 import { HttpStatusCode } from "axios";
 import { MeetingStatus, MeetingType } from "../enums/meetingStatus.enum";
+import { Types } from "mongoose";
 
 export async function getClientAndBusiness(
   req: Request,
@@ -193,6 +194,63 @@ export async function handleAppointmentWebhook(
 
   } catch (error: unknown) {
     console.error("Error en el webhook de citas (versión refactorizada):", error);
+    next(error);
+  }
+}
+
+export async function getClientMeetingStatus(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    // 1. Obtener y validar el ID del cliente de los parámetros de la ruta
+    const { clientId } = req.params;
+    if (!Types.ObjectId.isValid(clientId)) {
+      res.status(400).json({ message: " El ID del cliente proporcionado no es válido." });
+      return;
+    }
+
+    // 2. Buscar al cliente y USAR .populate() para traer los datos de sus reuniones
+    // Esto es clave: 'meetings' es el nombre del campo en tu ClientSchema.
+    const client = await models.clients.findById(clientId).populate('meetings');
+
+    if (!client) {
+      res.status(404).json({ message: "Cliente no encontrado." });
+      return;
+    }
+
+    // 3. Lógica para encontrar la próxima reunión que esté agendada
+    // Buscamos en el array de reuniones la primera que tenga el estado 'scheduled'.
+    // Podríamos añadir lógica para ordenar por fecha si un cliente pudiera tener varias.
+    const scheduledMeeting = client.meetings.find(
+      (meeting: any) => meeting.status === 'scheduled'
+    );
+
+    // 4. Formular y enviar la respuesta para el frontend
+    if (scheduledMeeting) {
+      // Si se encontró una reunión agendada, devolvemos sus detalles.
+      res.status(200).json({
+        hasScheduledMeeting: true,
+        meeting: {
+          id: scheduledMeeting._id,
+          status: scheduledMeeting.status,
+          meetingType: scheduledMeeting.meetingType,
+          assignedTo: scheduledMeeting.assignedTo,
+          scheduledTime: scheduledMeeting.scheduledTime,
+          meetingLink: scheduledMeeting.meetingLink,
+        },
+      });
+    } else {
+      // Si no hay reuniones agendadas, lo informamos claramente.
+      res.status(200).json({
+        hasScheduledMeeting: false,
+        message: "El cliente no tiene reuniones agendadas.",
+      });
+    }
+
+  } catch (error: unknown) {
+    console.error("Error al obtener el estado de la reunión del cliente:", error);
     next(error);
   }
 }

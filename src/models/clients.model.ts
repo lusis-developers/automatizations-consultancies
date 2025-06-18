@@ -16,7 +16,7 @@ interface IClient {
     cardInfo?: string;
     bank?: string;
   };
-  meetings: Types.ObjectId[];
+  meetings: any;
   transactions: Schema.Types.ObjectId[];
 }
 
