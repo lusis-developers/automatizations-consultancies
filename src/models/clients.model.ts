@@ -16,7 +16,14 @@ interface IClient {
     cardInfo?: string;
     bank?: string;
   };
+  IPortfolioMetaAdsMeeting: IPortfolioMetaAdsMeeting;
   transactions: Schema.Types.ObjectId[];
+}
+
+interface IPortfolioMetaAdsMeeting {
+  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
+  appointmentId: string; // ID de la cita de GoHighLevel
+  scheduledTime: Date;   // Fecha y hora de la cita
 }
 
 const ClientSchema: Schema<IClient> = new Schema(
@@ -45,6 +52,18 @@ const ClientSchema: Schema<IClient> = new Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    IPortfolioMetaAdsMeeting: {
+      type: {
+        status: { 
+          type: String,
+          enum: ['scheduled', 'completed', 'cancelled', 'no-show'], // Estados posibles
+        },
+        appointmentId: { type: String },
+        scheduledTime: { type: Date },
+      },
+      required: false,
+      default: null
     },
     dateOfBirth: {
       type: Date,

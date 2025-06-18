@@ -1,5 +1,5 @@
 import express from "express";
-import { getClientAndBusiness, getClientById, getClientsController } from "../controllers/client.controller";
+import { getClientAndBusiness, getClientById, getClientsController, handleAppointmentWebhook } from "../controllers/client.controller";
 
 const router = express.Router();
 
@@ -8,5 +8,7 @@ router.get("/client/:clientId/business/:businessId", getClientAndBusiness);
 router.get('/clients', getClientsController)
 
 router.get('/client/:clientId', getClientById)
+
+router.post('/webhoook/client/appointment', handleAppointmentWebhook)
 
 export default router;
