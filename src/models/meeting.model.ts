@@ -1,7 +1,7 @@
-import mongoose, { Model, Schema } from "mongoose";
+import mongoose, { Document, Model, Schema } from "mongoose";
 import { MeetingStatus, MeetingType } from "../enums/meetingStatus.enum";
 
-interface IMeeting {
+export interface IMeeting extends Document {
   client: Schema.Types.ObjectId;
   assignedTo: string; // <-- CAMBIO: De ObjectId a String
   status: MeetingStatus;
