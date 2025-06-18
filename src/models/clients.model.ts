@@ -1,4 +1,4 @@
-import mongoose, { Model, Schema } from "mongoose";
+import mongoose, { Model, Schema, Types } from "mongoose";
 
 interface IClient {
   name: string;
@@ -16,14 +16,8 @@ interface IClient {
     cardInfo?: string;
     bank?: string;
   };
-  IPortfolioMetaAdsMeeting: IPortfolioMetaAdsMeeting;
+  meetings: Types.ObjectId[];
   transactions: Schema.Types.ObjectId[];
-}
-
-interface IPortfolioMetaAdsMeeting {
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
-  appointmentId: string; // ID de la cita de GoHighLevel
-  scheduledTime: Date;   // Fecha y hora de la cita
 }
 
 const ClientSchema: Schema<IClient> = new Schema(
@@ -53,18 +47,10 @@ const ClientSchema: Schema<IClient> = new Schema(
       required: true,
       trim: true,
     },
-    IPortfolioMetaAdsMeeting: {
-      type: {
-        status: { 
-          type: String,
-          enum: ['scheduled', 'completed', 'cancelled', 'no-show'], // Estados posibles
-        },
-        appointmentId: { type: String },
-        scheduledTime: { type: Date },
-      },
-      required: false,
-      default: null
-    },
+    meetings: [{
+      type: Schema.Types.ObjectId,
+      ref: "meetings", // Referencia a nuestra nueva colección
+    }],
     dateOfBirth: {
       type: Date,
       required: true,

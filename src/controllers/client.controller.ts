@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import models from "../models";
 import { HttpStatusCode } from "axios";
+import { MeetingStatus, MeetingType } from "../enums/meetingStatus.enum";
 
 export async function getClientAndBusiness(
   req: Request,
@@ -111,72 +112,87 @@ export async function handleAppointmentWebhook(
   next: NextFunction,
 ): Promise<void> {
   try {
-    console.log("Webhook de cita recibido:", JSON.stringify(req.body, null, 2));
-
-    // 1. Extraer el email y el teléfono del payload
     const { email, phone, calendar } = req.body;
 
-    // 2. Validar que tenemos al menos un identificador y los datos del calendario
-    if ((!email && !phone) || !calendar || !calendar.appointmentId) {
-      console.log("Webhook ignorado: Faltan identificadores (email/phone) o datos del calendario.");
-      // Respondemos con 200 para que GHL no siga reintentando.
-      res.status(200).json({ message: "Datos de identificación insuficientes." });
+    // 1. Validar que el payload del calendario es correcto
+    if (!calendar || !calendar.appointmentId) {
+      console.log("Webhook ignorado: Datos de calendario incompletos.");
+      res.status(200).json({ message: "Datos de calendario incompletos." });
       return;
     }
 
-    // Opcional: Validar que sea el calendario correcto
-    if (calendar.calendarName !== "MEETING ACCESO PORTAFOLIO EMPRESARIAL") {
-        console.log(`Webhook ignorado: Calendario no aplicable "${calendar.calendarName}".`);
-        res.status(200).json({ message: "Calendario no aplicable." });
+    // 2. Prevenir duplicados (Idempotencia)
+    const existingMeeting = await models.meetings.findOne({ sourceId: calendar.appointmentId });
+    if (existingMeeting) {
+      console.log(`Webhook ignorado: La reunión con ID ${calendar.appointmentId} ya existe.`);
+      res.status(200).json({ message: "Reunión ya procesada." });
+      return;
+    }
+
+    // 3. Buscar al cliente (lógica multi-criterio)
+    const searchCriteria = [];
+    if (email) searchCriteria.push({ email: email.toLowerCase() });
+    if (phone) {
+      const normalizedPhone = phone.replace(/[\s\-()+\D]/g, '');
+      searchCriteria.push({ phone: new RegExp(normalizedPhone + '$') });
+    }
+    const client = await models.clients.findOne({ $or: searchCriteria });
+    if (!client) {
+      console.warn(`Cliente no encontrado para la cita ${calendar.appointmentId}`);
+      res.status(404).json({ message: "Cliente no encontrado." });
+      return;
+    }
+
+    // 4. Identificar al experto y el tipo de reunión
+    // CORRECCIÓN: Se inicializan las variables con null para solucionar el error de TypeScript
+    let assignedToExpertName: string | null = null;
+    let meetingType: MeetingType | null = null;
+
+    // Asignamos los valores basados en el nombre del calendario
+    if (calendar.calendarName === "MEETING ACCESO PORTAFOLIO EMPRESARIAL") {
+      assignedToExpertName = "Denisse Quimi";
+      meetingType = MeetingType.PORTFOLIO_ACCESS;
+    } else {
+      // Aquí podrías añadir lógica para otros calendarios en el futuro
+      // Ejemplo:
+      // } else if (calendar.calendarName === "REUNIÓN DE DATOS") {
+      //   assignedToExpertName = "Luis Reyes";
+      //   meetingType = MeetingType.DATA_STRATEGY;
+    }
+
+    // Si el calendario no es reconocido, no continuamos. La validación ahora es segura.
+    if (!assignedToExpertName || !meetingType) {
+        console.warn(`Tipo de calendario no reconocido: ${calendar.calendarName}`);
+        res.status(200).json({message: "Tipo de calendario no manejado."});
         return;
     }
 
-    // 3. CONSTRUIR LA CONSULTA DE BÚSQUEDA MULTI-CRITERIO
-    // Creamos un array de condiciones para la búsqueda.
-    const searchCriteria = [];
-
-    if (email) {
-      searchCriteria.push({ email: email.toLowerCase() });
-    }
-
-    if (phone) {
-      // Normalizamos el teléfono para una búsqueda más fiable.
-      // Esto quita espacios, guiones, paréntesis y el signo '+'.
-      const normalizedPhone = phone.replace(/[\s\-()+\D]/g, ''); 
-      // Buscamos un teléfono que TERMINE con los dígitos normalizados.
-      // Esto ayuda a coincidir con formatos como +593... y 099...
-      searchCriteria.push({ phone: new RegExp(normalizedPhone + '$') });
-    }
-
-    // 4. Buscar al cliente en la base de datos usando $or
-    // $or encontrará un documento que cumpla CUALQUIERA de las condiciones.
-    const client = await models.clients.findOne({ $or: searchCriteria });
-
-    if (!client) {
-      console.warn(`Cliente no encontrado con email: ${email} O teléfono: ${phone}`);
-      // Respondemos 404 porque, según la nueva lógica, no crearemos el cliente.
-      res.status(404).json({ message: "Cliente no encontrado con los criterios proporcionados." });
-      return;
-    }
-
-    // 5. Actualizar la información de la cita en el documento del cliente encontrado
-    // Uso "denisseMeeting" como definimos antes. Cámbialo si usas otro nombre en tu schema.
-    client.IPortfolioMetaAdsMeeting = {
-      status: 'scheduled',
-      appointmentId: calendar.appointmentId,
+    // 5. Crear el nuevo documento de Reunión
+    const newMeeting = new models.meetings({
+      client: client._id,
+      assignedTo: assignedToExpertName,
+      status: MeetingStatus.SCHEDULED,
+      meetingType: meetingType,
       scheduledTime: new Date(calendar.startTime),
-    };
+      endTime: new Date(calendar.endTime),
+      meetingLink: calendar.address,
+      sourceId: calendar.appointmentId,
+    });
+    
+    // 6. Guardar la nueva reunión en la base de datos
+    await newMeeting.save();
 
-    // 6. Guardar los cambios en la base de datos
+    // 7. Asociar la nueva reunión con el cliente, añadiendo su ID al array
+    client.meetings.push(newMeeting._id);
     await client.save();
 
-    console.log(`Cita (Portafolio) actualizada para el cliente: ${client.email}`);
+    console.log(`Nueva reunión de tipo '${meetingType}' con '${assignedToExpertName}' creada y asociada al cliente ${client.email}`);
 
-    // 7. Enviar una respuesta de éxito
-    res.status(200).json({ message: "Cita del cliente actualizada correctamente." });
+    // 8. Enviar respuesta de éxito
+    res.status(200).json({ message: "Reunión creada y asociada exitosamente." });
 
   } catch (error: unknown) {
-    console.error("Error en el webhook de citas:", error);
+    console.error("Error en el webhook de citas (versión refactorizada):", error);
     next(error);
   }
 }
