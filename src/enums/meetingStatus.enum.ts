@@ -3,6 +3,7 @@ export enum MeetingStatus {
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
   NO_SHOW = 'no-show',
+  PENDING_SCHEDULE = 'pending-schedule',
 }
 
 export enum MeetingType {

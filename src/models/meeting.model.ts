@@ -11,6 +11,7 @@ export interface IMeeting extends Document {
   meetingLink?: string;
   source: string;
   sourceId: string;
+  createdAt: Date;
 }
 
 const MeetingSchema: Schema<IMeeting> = new Schema(
@@ -36,14 +37,15 @@ const MeetingSchema: Schema<IMeeting> = new Schema(
       enum: Object.values(MeetingType),
       required: true,
     },
-    scheduledTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
-    meetingLink: { type: String, trim: true },
+    scheduledTime: { type: Date, required: false },
+    endTime: { type: Date, required: false },
+    meetingLink: { type: String, trim: false },
     source: { type: String, default: 'GoHighLevel' },
     sourceId: {
       type: String,
       unique: true,
-      required: true,
+      required: false,
+      default: null
     },
   },
   { timestamps: true, versionKey: false },
