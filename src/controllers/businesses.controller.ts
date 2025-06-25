@@ -158,15 +158,10 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
     let remindersSentCount = 0;
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
-    // --- CONSULTA CORREGIDA ---
-    // Usamos un $and principal para combinar todas las condiciones de forma clara y correcta.
+
     const businessesToRemind = await models.business.find({
       $and: [
-        // Condición 1: Deben estar en el paso de "subir datos".
         { onboardingStep: OnboardingStepEnum.PENDING_DATA_SUBMISSION },
-
-        // Condición 2: Al menos uno de los campos de archivo debe estar vacío.
         {
           $or: [
             { costoPorPlatoPath: { $in: [null, undefined, ""] } },
@@ -176,8 +171,6 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
             { ventasProductosPath: { $in: [null, undefined, ""] } },
           ]
         },
-
-        // Condición 3: O nunca se les ha enviado un recordatorio, o fue hace más de 24 horas.
         {
           $or: [
             { lastDataReminderSentAt: { $eq: null } },
@@ -199,7 +192,7 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
             business.owner.email,
             business.name,
             business.owner._id.toString(),
-            business._id as any, // Corregí el business._id! a solo business._id
+            business._id as any,
           );
 
           await models.business.findByIdAndUpdate(business._id, {
@@ -216,8 +209,6 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
       message: "Reminder process completed.",
       remindersSent: remindersSentCount,
     });
-
-    // No es necesario un return explícito aquí, pero no causa problemas.
   } catch (error) {
     console.error("Error in reminder sending process:", error);
     next(error);
