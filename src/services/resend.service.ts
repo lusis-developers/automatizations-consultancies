@@ -4,6 +4,7 @@ import CustomError from "../errors/customError.error";
 import { Resend } from "resend";
 import { generateOnBoardingEmail } from "../emails/generateOnBoarding.email";
 import { generatePaymentConfirmationEmail } from "../emails/generatePayEmail.email";
+import { generateUploadReminderEmail } from "../emails/generateUploadReminderEmail.email";
 
 class ResendEmail {
   private resend: Resend;
@@ -75,6 +76,33 @@ class ResendEmail {
       throw new Error(
         `Problema al enviar email de confirmación de pago: ${error}`,
       );
+    }
+  }
+
+  public async sendUploadReminderEmail(
+    email: string,
+    businessName: string,
+    userId: string,
+    businessId: string
+  ): Promise<void> {
+    try {
+      const link = `https://onboarding.bakano.ec/${userId}/${businessId}`;
+      
+      const content = await generateUploadReminderEmail(businessName, link);
+
+      const { error } = await this.resend.emails.send({
+        to: email,
+        from: "bakano@bakano.ec",
+        html: content,
+        subject: `Recordatorio: Sube tus archivos para ${businessName}`,
+      });
+
+      if (error) {
+        throw new CustomError("Problem sending upload reminder email from resend", 400, error);
+      }
+    } catch (error) {
+      console.error("Resend upload reminder email error", error);
+      throw new Error(`Problem sending upload reminder email: ${error}`);
     }
   }
 }
