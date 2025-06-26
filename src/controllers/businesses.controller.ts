@@ -5,6 +5,9 @@ import fs from "fs";
 import os from "os";
 import { GoogleDriveService } from "../services/googleDrive.service";
 import { Types } from "mongoose";
+import ResendEmail from "../services/resend.service";
+import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
+import { HttpStatusCode } from "axios";
 
 export async function receiveConsultancyData(
   req: Request,
@@ -145,6 +148,69 @@ export async function editBusinessData(req: Request, res: Response, next: NextFu
     });
 
   } catch (error: unknown) {
+    next(error);
+  }
+}
+
+export async function sendDataUploadReminders(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const resendEmail = new ResendEmail();
+    let remindersSentCount = 0;
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const businessesToRemind = await models.business.find({
+      $and: [
+        { onboardingStep: OnboardingStepEnum.PENDING_DATA_SUBMISSION },
+        {
+          $or: [
+            { costoPorPlatoPath: { $in: [null, undefined, ""] } },
+            { menuRestaurantePath: { $in: [null, undefined, ""] } },
+            { ventasClientePath: { $in: [null, undefined, ""] } },
+            { ventasMovimientosPath: { $in: [null, undefined, ""] } },
+            { ventasProductosPath: { $in: [null, undefined, ""] } },
+          ]
+        },
+        {
+          $or: [
+            { lastDataReminderSentAt: { $eq: null } },
+            { lastDataReminderSentAt: { $lt: twentyFourHoursAgo } }
+          ]
+        }
+      ]
+    }).populate<{ owner: { _id: Types.ObjectId, email: string } }>('owner', '_id email');
+
+    if (businessesToRemind.length === 0) {
+      res.status(HttpStatusCode.Ok).send({ message: "No businesses require a reminder at this time." });
+      return;
+    }
+    
+    for (const business of businessesToRemind) {
+      if (business.owner && business.owner.email && business.owner._id) {
+        try {
+          await resendEmail.sendUploadReminderEmail(
+            business.owner.email,
+            business.name,
+            business.owner._id.toString(),
+            business._id as any,
+          );
+
+          await models.business.findByIdAndUpdate(business._id, {
+            lastDataReminderSentAt: new Date(),
+          });
+          remindersSentCount++;
+        } catch (error) {
+          console.error(`Failed to process reminder for business ${business.name} (${business._id}):`, error);
+        }
+      }
+    }
+
+    res.status(HttpStatusCode.Ok).send({
+      message: "Reminder process completed.",
+      remindersSent: remindersSentCount,
+    });
+  } catch (error) {
+    console.error("Error in reminder sending process:", error);
     next(error);
   }
 }

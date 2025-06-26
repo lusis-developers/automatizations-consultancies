@@ -1,11 +1,14 @@
 import * as dotenv from "dotenv";
 import createApp from "./app";
 import dbConnect from "./config/mongo";
+import { initializeSchedulers } from "./schedulers";
 
 async function main() {
   dotenv.config();
 
   await dbConnect();
+
+  initializeSchedulers()
 
   const { app, server } = createApp();
 
