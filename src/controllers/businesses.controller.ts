@@ -2,7 +2,6 @@ import type { NextFunction, Request, Response } from "express";
 import models from "../models";
 import path from "path";
 import fs from "fs";
-import os from "os";
 import { GoogleDriveService } from "../services/googleDrive.service";
 import { Types } from "mongoose";
 import ResendEmail from "../services/resend.service";
@@ -13,6 +12,7 @@ export async function receiveConsultancyData(
   req: Request,
   res: Response,
 ): Promise<void> {
+  const files = req.files as Express.Multer.File[];
   try {
     const {
       address,
@@ -31,8 +31,10 @@ export async function receiveConsultancyData(
 
     const { businessId } = req.params;
 
-    console.log("Datos recibidos:", req.body);
-    console.log("Business ID recibido:", businessId);
+    if (!Types.ObjectId.isValid(businessId)) {
+        res.status(HttpStatusCode.BadRequest).send({ message: "El ID del negocio no es válido." });
+        return;
+    }
 
     const driveService = new GoogleDriveService(
       path.resolve(
@@ -41,12 +43,14 @@ export async function receiveConsultancyData(
       ),
       "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL",
     );
-
-    const files = req.files as Express.Multer.File[];
-
     const business = await models.business.findById(businessId);
     if (!business) {
-      res.status(404).json({ message: "Negocio no encontrado con ese ID" });
+      if (Array.isArray(files)) {
+        for (const file of files) {
+          fs.unlinkSync(file.path);
+        }
+      }
+      res.status(HttpStatusCode.BadRequest).send({ message: "Negocio no encontrado con ese ID" });
       return;
     }
 
@@ -55,57 +59,51 @@ export async function receiveConsultancyData(
 
     if (Array.isArray(files)) {
       for (const file of files) {
-        const fileName = `${Date.now()}-${file.originalname}`;
-        const tempPath = path.join(os.tmpdir(), fileName);
-
-        fs.writeFileSync(tempPath, file.buffer);
-
         const driveUrl = await driveService.uploadFileToSubfolder(
-          tempPath,
-          fileName,
+          file.path,
+          file.originalname,
           businessFolderId,
         );
 
         const fieldName = file.fieldname;
         filePaths[`${fieldName}Path`] = driveUrl;
 
-        fs.unlinkSync(tempPath);
+        fs.unlinkSync(file.path);
       }
     }
 
-    // Actualizar el negocio con los nuevos datos
-    business.instagram = instagram;
-    business.tiktok = tiktok;
-    business.empleados = empleados;
-    business.ingresoMensual = ingresoMensual;
-    business.ingresoAnual = ingresoAnual;
-    business.desafioPrincipal = desafioPrincipal;
-    business.objetivoIdeal = objetivoIdeal;
-    business.ruc = business.ruc;
-    business.address = address;
-    business.phone = phone;
-    business.email = email;
-    business.name = business.name;
-    business.vendePorWhatsapp = vendePorWhatsapp;
-    business.gananciaWhatsapp = gananciaWhatsapp;
-
-    // Añadir las rutas de archivos cargados
-    Object.entries(filePaths).forEach(([key, value]) => {
-      business.set(key, value);
+    business.set({
+        instagram,
+        tiktok,
+        empleados,
+        ingresoMensual,
+        ingresoAnual,
+        desafioPrincipal,
+        objetivoIdeal,
+        address,
+        phone,
+        email,
+        vendePorWhatsapp,
+        gananciaWhatsapp,
+        ...filePaths
     });
-
     await business.save();
 
-    res.status(200).json({
+    res.status(HttpStatusCode.Ok).send({
       message: "Datos de consultoría actualizados correctamente",
       businessId: business._id,
       filePaths,
     });
   } catch (error: any) {
     console.error("Error al recibir datos de consultoría:", error);
-    res
-      .status(500)
-      .json({ message: "Error interno del servidor", error: error.message });
+    if (Array.isArray(files)) {
+      for (const file of files) {
+        if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+        }
+      }
+    }
+    res.status(500).send({ message: "Error interno del servidor", error: error.message });
   }
 }
 
