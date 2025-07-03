@@ -57,6 +57,8 @@ RUN pnpm install --prod
 # Copiar los archivos compilados y las credenciales desde la etapa 'builder'
 COPY --from=builder /usr/src/app/dist ./dist
 
+RUN mkdir uploads
+
 # Exponer el puerto en el que la aplicación se ejecutará
 EXPOSE 8000
 
