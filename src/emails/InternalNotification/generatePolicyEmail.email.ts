@@ -9,6 +9,7 @@ export function generatePolicyEmail(recipientName: string): string {
   const BAKANO_LIGHT = '#ededed';
   const WHITE = '#ffffff';
   const POLICY_LINK = 'https://docs.google.com/document/d/1VZ5SSZDsdHeZlDwzMz1mN-4v7ie8QPNwGvXNnUEtaW0/edit?usp=sharing';
+  const WEBSITE_POLICY_LINK = 'https://mkt.bakano.ec/politicas'; // Link del sitio web
 
   const HtmlEmail = `
   <html>
@@ -39,15 +40,19 @@ export function generatePolicyEmail(recipientName: string): string {
                     Te recomendamos leerlo detenidamente.
                   </p>
                  <p style="text-align: center; margin-top: 30px;">
-                    <a href="${POLICY_LINK}" target="_blank" style="background-color: ${BAKANO_PINK}; color: ${WHITE}; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Leer Políticas de Servicio</a>
+                    <a href="${POLICY_LINK}" target="_blank" style="background-color: ${BAKANO_PINK}; color: ${WHITE}; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Leer Documento de Políticas</a>
                   </p>
                 </td>
               </tr>
 
               <tr style="background-color: ${BAKANO_DARK};">
                 <td align="center" style="padding: 30px 40px; color: ${WHITE};">
-                   <p style="margin: 0; font-size: 12px; color: #bbbbbb; line-height: 1.5;">
-                     Este es un correo generado automáticamente por el sistema de Bakano Agency. Por favor, no respondas a este mensaje, ya que esta casilla de correo no es monitoreada.
+                   <p style="margin: 0; font-size: 12px; color: #bbbbbb; line-height: 1.6;">
+                     Este es un correo generado automáticamente. Por favor, no respondas a este mensaje, ya que esta casilla no es monitoreada.
+                     <br><br>
+                     © ${new Date().getFullYear()} Bakano Agency. Todos los derechos reservados.
+                     <br>
+                     Puedes consultar nuestras <a href="${WEBSITE_POLICY_LINK}" target="_blank" style="color: #bbbbbb; text-decoration: underline;">Políticas de Servicio y Privacidad en nuestro sitio web</a>.
                    </p>
                 </td>
               </tr>
