@@ -11,16 +11,18 @@ import ResendEmail from "../services/resend.service";
  * @route POST /api/businesses/:businessId/managers
  */
 
-export async function addManagerToBusiness(req: Request, res: Response) {
+export async function addManagerToBusiness(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { businessId } = req.params;
   const { name, email, role } = req.body as IManager;
 
   // 1. Input Validation
   if (!Types.ObjectId.isValid(businessId)) {
-    return res.status(HttpStatusCode.BadRequest).json({ message: "Business ID is invalid." });
+    res.status(HttpStatusCode.BadRequest).json({ message: "Business ID is invalid." });
+    return
   }
   if (!name || !email) {
-    return res.status(HttpStatusCode.BadRequest).json({ message: "Manager name and email are required." });
+    res.status(HttpStatusCode.BadRequest).json({ message: "Manager name and email are required." });
+    return
   }
 
   try {
@@ -28,12 +30,14 @@ export async function addManagerToBusiness(req: Request, res: Response) {
     const business = await models.business.findById(businessId).populate<{ owner: IClient }>('owner');
 
     if (!business) {
-      return res.status(HttpStatusCode.NotFound).json({ message: "Business not found." });
+      res.status(HttpStatusCode.NotFound).json({ message: "Business not found." });
+      return
     }
     
     const managerExists = business.managers?.some((manager: IManager) => manager.email === email);
     if (managerExists) {
-      return res.status(HttpStatusCode.Conflict).json({ message: `A manager with email ${email} already exists in this business.` });
+      res.status(HttpStatusCode.Conflict).json({ message: `A manager with email ${email} already exists in this business.` });
+      return
     }
 
     // 3. Add manager to database
@@ -54,14 +58,15 @@ export async function addManagerToBusiness(req: Request, res: Response) {
       console.error(`Manager ${name} was added to ${business.name}, but onboarding email failed:`, emailError);
     }
 
-    return res.status(HttpStatusCode.Created).send({ 
+    res.status(HttpStatusCode.Created).send({ 
       message: "Manager successfully added. Onboarding email has been sent.",
       data: business.managers,
     });
+    return
 
   } catch (error) {
     console.error("Error adding manager:", error);
-    return res.status(HttpStatusCode.InternalServerError).send({ message: "Internal server error." });
+    next(error)
   }
 }
 
