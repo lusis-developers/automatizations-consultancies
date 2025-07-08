@@ -47,7 +47,7 @@ export interface IBusiness extends Document {
 	desafioPrincipal?: string;
 	objetivoIdeal?: string;
 	costoPorPlatoPath?: string; // Para almacenar la ruta del archivo
-	menuRestaurantePath?: string; // Para almacenar la ruta del archivo
+	menuRestaurantePath?: string | string[];
 	ventasClientePath?: string; // Para almacenar la ruta del archivo
 	ventasMovimientosPath?: string; // Para almacenar la ruta del archivo
 	ventasProductosPath?: string; // Para almacenar la ruta del archivo
@@ -137,12 +137,13 @@ const BusinessSchema = new Schema<IBusiness>(
       trim: true 
     },
 		costoPorPlatoPath: { 
-      type: String, 
-      required: false 
+      type: String,
+      required: false
     }, // Campo para la ruta del archivo
-		menuRestaurantePath: { 
-      type: String, required: false 
-    }, // Campo para la ruta del archivo
+		menuRestaurantePath: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
 		ventasClientePath: {
       type: String, 
       required: false 

@@ -12,24 +12,10 @@ import { IClient } from "../models/clients.model";
 export async function receiveConsultancyData(
   req: Request,
   res: Response,
+  next: NextFunction,
 ): Promise<void> {
-  const files = req.files as Express.Multer.File[];
+  const allFiles = req.files as Express.Multer.File[];
   try {
-    const {
-      address,
-      phone,
-      email,
-      instagram,
-      tiktok,
-      empleados,
-      ingresoMensual,
-      ingresoAnual,
-      desafioPrincipal,
-      objetivoIdeal,
-      vendePorWhatsapp,
-      gananciaWhatsapp
-    } = req.body;
-
     const { businessId } = req.params;
 
     if (!Types.ObjectId.isValid(businessId)) {
@@ -44,12 +30,13 @@ export async function receiveConsultancyData(
       ),
       "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL",
     );
+
     const business = await models.business.findById(businessId)
       .populate<{ owner: IClient }>('owner');
 
     if (!business) {
-      if (Array.isArray(files)) {
-        for (const file of files) {
+      if (Array.isArray(allFiles)) {
+        for (const file of allFiles) {
           fs.unlinkSync(file.path);
         }
       }
@@ -58,38 +45,43 @@ export async function receiveConsultancyData(
     }
 
     const businessFolderId = await driveService.ensureSubfolder(business.name);
-    const filePaths: { [key: string]: string } = {};
-
-    if (Array.isArray(files)) {
-      for (const file of files) {
+    
+    const updatePayload: any = { ...req.body };
+    const newMenuUrls: string[] = [];
+    
+    if (Array.isArray(allFiles)) {
+      for (const file of allFiles) {
         const driveUrl = await driveService.uploadFileToSubfolder(
           file.path,
           file.originalname,
           businessFolderId,
         );
 
-        const fieldName = file.fieldname;
-        filePaths[`${fieldName}Path`] = driveUrl;
+        if (file.fieldname === 'menuRestaurante') {
+          newMenuUrls.push(driveUrl);
+        } else {
+          updatePayload[`${file.fieldname}Path`] = driveUrl;
+        }
 
         fs.unlinkSync(file.path);
       }
     }
 
-    business.set({
-        instagram,
-        tiktok,
-        empleados,
-        ingresoMensual,
-        ingresoAnual,
-        desafioPrincipal,
-        objetivoIdeal,
-        address,
-        phone,
-        email,
-        vendePorWhatsapp,
-        gananciaWhatsapp,
-        ...filePaths
-    });
+    if (newMenuUrls.length > 0) {
+      const existingMenus = business.menuRestaurantePath;
+      let finalMenuPaths: string[] = [];
+
+      if (typeof existingMenus === 'string' && existingMenus) {
+        finalMenuPaths = [existingMenus, ...newMenuUrls];
+      } else if (Array.isArray(existingMenus)) {
+        finalMenuPaths = [...existingMenus, ...newMenuUrls];
+      } else {
+        finalMenuPaths = newMenuUrls;
+      }
+      updatePayload.menuRestaurantePath = finalMenuPaths;
+    }
+
+    business.set(updatePayload);
     await business.save();
 
     try {
@@ -109,18 +101,19 @@ export async function receiveConsultancyData(
     res.status(HttpStatusCode.Ok).send({
       message: "Datos de consultoría actualizados correctamente",
       businessId: business._id,
-      filePaths,
+      updatedData: updatePayload,
     });
+
   } catch (error: any) {
     console.error("Error al recibir datos de consultoría:", error);
-    if (Array.isArray(files)) {
-      for (const file of files) {
+    if (Array.isArray(allFiles)) {
+      for (const file of allFiles) {
         if (fs.existsSync(file.path)) {
             fs.unlinkSync(file.path);
         }
       }
     }
-    res.status(500).send({ message: "Error interno del servidor", error: error.message });
+    next(error)
   }
 }
 
