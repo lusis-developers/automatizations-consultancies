@@ -91,6 +91,7 @@ export async function receiveConsultancyData(
           business.name,
           business._id as string,
           business.owner.name,
+          business.owner._id as string,
           business.owner.email
         );
       }
