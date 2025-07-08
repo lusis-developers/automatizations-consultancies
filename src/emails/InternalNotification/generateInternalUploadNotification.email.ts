@@ -1,27 +1,27 @@
-// ARCHIVO: src/emails/generateInternalUploadNotification.email.ts
-
 /**
  * Genera el HTML para la notificación interna de subida de archivos.
  * @param businessName - El nombre del negocio del cliente.
  * @param ownerName - El nombre del dueño del negocio.
  * @param ownerEmail - El email del dueño.
- * @param businessId - El ID del negocio para generar un enlace directo.
+ * @param businessId - El ID del negocio.
+ * @param clientId - El ID del cliente (dueño).
  * @returns El string del HTML del email.
  */
 export function generateInternalUploadNotificationEmail(
   businessName: string,
   ownerName: string,
   ownerEmail: string,
-  businessId: string
+  businessId: string,
+  clientId: string,
 ): string {
   const BAKANO_PINK = '#e6285c';
   const BAKANO_DARK = '#191423';
   const BAKANO_LIGHT = '#ededed';
-  const BAKANO_GREEN = '#3bb77e'; // Color para indicar éxito/acción
+  const BAKANO_GREEN = '#3bb77e';
   const WHITE = '#ffffff';
 
-  // Enlace hipotético a un panel de administración interno
-  const adminLink = `https://admin.bakano.ec/business/${businessId}`;
+  // Enlace al panel de administración interno con el formato correcto
+  const adminLink = `https://admin.bakano.ec/client/${clientId}/business/${businessId}`;
 
   const HtmlEmail = `
   <html>
@@ -55,7 +55,7 @@ export function generateInternalUploadNotificationEmail(
                   </p>
 
                  <p style="text-align: center; margin-top: 30px;">
-                    <a href="${adminLink}" style="background-color: ${BAKANO_GREEN}; color: ${WHITE}; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Revisar Archivos</a>
+                    <a href="${adminLink}" target="_blank" style="background-color: ${BAKANO_GREEN}; color: ${WHITE}; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Revisar Archivos</a>
                   </p>
                 </td>
               </tr>

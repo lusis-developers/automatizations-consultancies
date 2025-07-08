@@ -150,10 +150,11 @@ class ResendEmail {
     businessName: string,
     businessId: string,
     ownerName: string,
+    clientId: string,
     ownerEmail: string
   ): Promise<void> {
     try {
-      const content = generateInternalUploadNotificationEmail(businessName, ownerName, ownerEmail, businessId);
+      const content = generateInternalUploadNotificationEmail(businessName, ownerName, ownerEmail, businessId, clientId);
 
       const { data, error } = await this.resend.emails.send({
         to: this.internalSpecialists,

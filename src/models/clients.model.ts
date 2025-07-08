@@ -18,6 +18,9 @@ export interface IClient {
   };
   meetings: any;
   transactions: Schema.Types.ObjectId[];
+  _id: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const ClientSchema: Schema<IClient> = new Schema(
