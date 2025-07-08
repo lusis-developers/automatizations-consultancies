@@ -183,7 +183,7 @@ class ResendEmail {
 
       const { error } = await this.resend.emails.send({
         to: recipientEmail,
-        from: "legal@bakano.ec", // Usamos un 'from' más apropiado
+        from: "legal@bakano.ec",
         html: content,
         subject: "Importante: Políticas de Servicio y Privacidad de Bakano Agency",
       });

@@ -46,7 +46,9 @@ export function generatePolicyEmail(recipientName: string): string {
 
               <tr style="background-color: ${BAKANO_DARK};">
                 <td align="center" style="padding: 30px 40px; color: ${WHITE};">
-                   <p style="margin: 0; font-size: 12px; color: #bbbbbb;">Este es un correo informativo importante de Bakano Agency.</p>
+                   <p style="margin: 0; font-size: 12px; color: #bbbbbb; line-height: 1.5;">
+                     Este es un correo generado automáticamente por el sistema de Bakano Agency. Por favor, no respondas a este mensaje, ya que esta casilla de correo no es monitoreada.
+                   </p>
                 </td>
               </tr>
             </table>
