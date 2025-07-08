@@ -1,6 +1,7 @@
 import express from "express";
 import { editBusinessData, receiveConsultancyData, sendDataUploadReminders } from "../controllers/businesses.controller";
 import { upload } from "../middlewares/upload.middleware";
+import { addManagerToBusiness, getBusinessManagers, removeManagerFromBusiness } from "../controllers/manager.controller";
 
 const router = express.Router();
 
@@ -19,5 +20,21 @@ router.post(
   "/business/send-upload-reminders",
   sendDataUploadReminders
 );
+
+
+router.post(
+  "/business/:businessId/managers",
+  addManagerToBusiness
+)
+
+router.get(
+  "/business/:businessId/managers",
+  getBusinessManagers
+)
+
+router.delete(
+  "/business/:businessId/managers/:managerId",
+  removeManagerFromBusiness
+)
 
 export default router;

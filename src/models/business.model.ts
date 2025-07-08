@@ -1,5 +1,32 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
+
+
+export interface IManager extends Document {
+	_id: Types.ObjectId,
+	name: string;
+	email: string;
+	role?: string
+}
+
+
+const managerSchema = new Schema<IManager>({
+	name: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	email: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	role: {
+		type: String,
+		trim: true,
+		default: "manager",
+	},
+})
 
 export interface IBusiness extends Document {
 	name: string;
@@ -7,6 +34,7 @@ export interface IBusiness extends Document {
 	address: string;
 	phone: string;
 	email: string;
+	managers: IManager[]
 	owner: Schema.Types.ObjectId;
 	createdAt: Date;
 	updatedAt: Date;
@@ -19,7 +47,7 @@ export interface IBusiness extends Document {
 	desafioPrincipal?: string;
 	objetivoIdeal?: string;
 	costoPorPlatoPath?: string; // Para almacenar la ruta del archivo
-	menuRestaurantePath?: string; // Para almacenar la ruta del archivo
+	menuRestaurantePath?: string | string[];
 	ventasClientePath?: string; // Para almacenar la ruta del archivo
 	ventasMovimientosPath?: string; // Para almacenar la ruta del archivo
 	ventasProductosPath?: string; // Para almacenar la ruta del archivo
@@ -69,7 +97,10 @@ const BusinessSchema = new Schema<IBusiness>(
 			ref: "clients",
 			required: true,
 		},
-		// Nuevos campos de la consultoría
+		managers: {
+			type: [managerSchema],
+			default: []
+		},
 		instagram: { 
       type: String, 
       required: false, trim: 
@@ -106,12 +137,13 @@ const BusinessSchema = new Schema<IBusiness>(
       trim: true 
     },
 		costoPorPlatoPath: { 
-      type: String, 
-      required: false 
+      type: String,
+      required: false
     }, // Campo para la ruta del archivo
-		menuRestaurantePath: { 
-      type: String, required: false 
-    }, // Campo para la ruta del archivo
+		menuRestaurantePath: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
 		ventasClientePath: {
       type: String, 
       required: false 

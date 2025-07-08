@@ -86,22 +86,34 @@ export async function handleManualPayment(
     });
 
     if (!business) {
-      business = await models.business.create({
-        name: body.businessName,
-        owner: cliente._id,
-        ruc: body.clientId || "",
-        email: body.email,
-        phone: body.phone,
-        address: "Sin dirección",
-      });
-      wasNewBusinessCreated = true;
+		business = await models.business.create({
+			name: body.businessName,
+			owner: cliente._id,
+			ruc: body.clientId || "",
+			email: body.email,
+			phone: body.phone,
+			address: "Sin dirección",
+		});
+		wasNewBusinessCreated = true;
 
-      await models.clients.updateOne(
-        { _id: cliente._id },
-        { $push: { businesses: business._id } }
-      );
-      console.log(`[Manual Payment - Nuevo Negocio Creado] Nombre: ${business.name}, Dueño: ${cliente.email}`);
-    }
+		await models.clients.updateOne(
+			{ _id: cliente._id },
+			{ $push: { businesses: business._id } }
+		);
+		console.log(
+			`[Manual Payment - Nuevo Negocio Creado] Nombre: ${business.name}, Dueño: ${cliente.email}`
+		);
+
+		try {
+			const resendService = new ResendEmail();
+			await resendService.sendPoliciesEmail(cliente.name, cliente.email);
+		} catch (policyEmailError) {
+			console.error(
+				`[Payment Flow] Business ${business.name} created, but policies email failed:`,
+				policyEmailError
+			);
+		}
+	}
 
     // 4. Crea la transacción (esto siempre ocurre)
     const transaction = await models.transactions.create({
