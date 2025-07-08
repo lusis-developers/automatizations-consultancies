@@ -6,9 +6,16 @@ import { generateOnBoardingEmail } from "../emails/generateOnBoarding.email";
 import { generatePaymentConfirmationEmail } from "../emails/generatePayEmail.email";
 import { generateUploadReminderEmail } from "../emails/generateUploadReminderEmail.email";
 import { generateManagerOnboardingEmail } from "../emails/generateManagerOnboarding.email";
+import { generateInternalUploadNotificationEmail } from "../emails/InternalNotification/generateInternalUploadNotification.email";
 
 class ResendEmail {
   private resend: Resend;
+
+  private internalSpecialists: string[] = [
+    "dreyes@bakano.ec",
+    "dquimi@bakano.ec",
+    "lreyes@bakano.ec",
+  ];
 
   constructor() {
     const RESEND_KEY = process.env.RESEND_KEY;
@@ -135,6 +142,34 @@ class ResendEmail {
     } catch (error) {
       console.error(`[Email Service] Failed to send manager onboarding email: ${error}`);
       throw new CustomError("Problem sending manager onboarding email", 400, error);
+    }
+  }
+
+   public async sendInternalUploadNotification(
+    businessName: string,
+    businessId: string,
+    ownerName: string,
+    ownerEmail: string
+  ): Promise<void> {
+    try {
+      const content = generateInternalUploadNotificationEmail(businessName, ownerName, ownerEmail, businessId);
+
+      const { data, error } = await this.resend.emails.send({
+        to: this.internalSpecialists,
+        from: "sistema@bakano.ec", // Usamos un 'from' más sistémico
+        html: content,
+        subject: `Alerta de Onboarding: Nuevos archivos subidos por ${businessName} 🚀`,
+      });
+
+      if (error) {
+        throw new CustomError("Problem sending internal notification from resend", 400, error);
+      }
+
+      console.log(`[Email Service] Notificación interna enviada exitosamente para el negocio ${businessName}.`);
+
+    } catch (error) {
+      console.error(`[Email Service] Failed to send internal notification for ${businessName}:`, error);
+      throw new CustomError("Problem sending internal notification from resend", 400, error);
     }
   }
 }

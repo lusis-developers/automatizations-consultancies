@@ -7,6 +7,7 @@ import { Types } from "mongoose";
 import ResendEmail from "../services/resend.service";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 import { HttpStatusCode } from "axios";
+import { IClient } from "../models/clients.model";
 
 export async function receiveConsultancyData(
   req: Request,
@@ -43,7 +44,9 @@ export async function receiveConsultancyData(
       ),
       "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL",
     );
-    const business = await models.business.findById(businessId);
+    const business = await models.business.findById(businessId)
+      .populate<{ owner: IClient }>('owner');
+
     if (!business) {
       if (Array.isArray(files)) {
         for (const file of files) {
@@ -88,6 +91,20 @@ export async function receiveConsultancyData(
         ...filePaths
     });
     await business.save();
+
+    try {
+      if (business.owner) {
+        const resendService = new ResendEmail();
+        await resendService.sendInternalUploadNotification(
+          business.name,
+          business._id as string,
+          business.owner.name,
+          business.owner.email
+        );
+      }
+    } catch (emailError) {
+      console.error(`Los datos de ${business.name} se guardaron, pero la notificación interna falló:`, emailError);
+    }
 
     res.status(HttpStatusCode.Ok).send({
       message: "Datos de consultoría actualizados correctamente",
