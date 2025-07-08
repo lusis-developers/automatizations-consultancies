@@ -12,7 +12,7 @@ router.post(
 );
 
 router.patch(
-  "business/edit/:businessId",
+  "/business/edit/:businessId",
   editBusinessData,
 )
 

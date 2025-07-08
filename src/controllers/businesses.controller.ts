@@ -157,6 +157,7 @@ export async function editBusinessData(req: Request, res: Response, next: NextFu
     });
 
   } catch (error: unknown) {
+    console.error('error al editar negocio', error);
     next(error);
   }
 }
