@@ -17,11 +17,11 @@ export async function addManagerToBusiness(req: Request, res: Response, next: Ne
 
   // 1. Input Validation
   if (!Types.ObjectId.isValid(businessId)) {
-    res.status(HttpStatusCode.BadRequest).json({ message: "Business ID is invalid." });
+    res.status(HttpStatusCode.BadRequest).send({ message: "Business ID is invalid." });
     return
   }
   if (!name || !email) {
-    res.status(HttpStatusCode.BadRequest).json({ message: "Manager name and email are required." });
+    res.status(HttpStatusCode.BadRequest).send({ message: "Manager name and email are required." });
     return
   }
 
@@ -30,13 +30,13 @@ export async function addManagerToBusiness(req: Request, res: Response, next: Ne
     const business = await models.business.findById(businessId).populate<{ owner: IClient }>('owner');
 
     if (!business) {
-      res.status(HttpStatusCode.NotFound).json({ message: "Business not found." });
+      res.status(HttpStatusCode.NotFound).send({ message: "Business not found." });
       return
     }
     
     const managerExists = business.managers?.some((manager: IManager) => manager.email === email);
     if (managerExists) {
-      res.status(HttpStatusCode.Conflict).json({ message: `A manager with email ${email} already exists in this business.` });
+      res.status(HttpStatusCode.Conflict).send({ message: `A manager with email ${email} already exists in this business.` });
       return
     }
 
