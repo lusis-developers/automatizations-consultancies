@@ -2,6 +2,8 @@ import type { Request, NextFunction, Response } from "express";
 import { models, Types } from "mongoose";
 import { IManager } from "../models/business.model";
 import { HttpStatusCode } from "axios";
+import { IClient } from "../models/clients.model";
+import ResendEmail from "../services/resend.service";
 
 
 /**
@@ -9,58 +11,58 @@ import { HttpStatusCode } from "axios";
  * @route POST /api/businesses/:businessId/managers
  */
 
-export async function addManagerToBusiness(
-	req: Request,
-	res: Response,
-	next: NextFunction
-): Promise<void> {
-	try {
-		const { businessId } = req.params;
-		const { name, email, role } = req.body as IManager;
+export async function addManagerToBusiness(req: Request, res: Response) {
+  const { businessId } = req.params;
+  const { name, email, role } = req.body as IManager;
 
-		if (!Types.ObjectId.isValid(businessId)) {
-			res.status(400).send({ message: "Invalid business ID." });
-			return;
-		}
-		if (!name || !email) {
-			res.status(400).send({
-				message: "Manager name and email are required.",
-			});
-			return;
-		}
+  // 1. Input Validation
+  if (!Types.ObjectId.isValid(businessId)) {
+    return res.status(HttpStatusCode.BadRequest).json({ message: "Business ID is invalid." });
+  }
+  if (!name || !email) {
+    return res.status(HttpStatusCode.BadRequest).json({ message: "Manager name and email are required." });
+  }
 
-		const business = await models.business.findById(businessId);
+  try {
+    // 2. Find business and get owner data with .populate()
+    const business = await models.business.findById(businessId).populate<{ owner: IClient }>('owner');
 
-		if (!business) {
-			res.status(404).send({ message: "Business not found." });
-			return;
-		}
+    if (!business) {
+      return res.status(HttpStatusCode.NotFound).json({ message: "Business not found." });
+    }
+    
+    const managerExists = business.managers?.some((manager: IManager) => manager.email === email);
+    if (managerExists) {
+      return res.status(HttpStatusCode.Conflict).json({ message: `A manager with email ${email} already exists in this business.` });
+    }
 
-		const managerExists = business.managers?.some(
-			(manager: IManager) => manager.email === email
-		);
+    // 3. Add manager to database
+    business.managers.push({ name, email, role } as IManager);
+    await business.save();
+    
+    try {
+      const resendService = new ResendEmail();
+      await resendService.sendManagerOnboardingEmail(
+        email,
+        name,
+        business.owner.name,
+        business.name,
+        business.owner._id.toString(),
+        business._id.toString()
+      );
+    } catch (emailError) {
+      console.error(`Manager ${name} was added to ${business.name}, but onboarding email failed:`, emailError);
+    }
 
-		if (managerExists) {
-			res.status(409).send({
-				message: `A manager with email ${email} already exists in this business.`,
-			});
-			return;
-		}
+    return res.status(HttpStatusCode.Created).send({ 
+      message: "Manager successfully added. Onboarding email has been sent.",
+      data: business.managers,
+    });
 
-		const updatedBusiness = await models.business.findByIdAndUpdate(
-			businessId,
-			{ $push: { managers: { name, email, role } } },
-			{ new: true, runValidators: true }
-		);
-
-		res.status(201).send({
-			message: "Manager added successfully.",
-			data: updatedBusiness?.managers,
-		});
-	} catch (error: unknown) {
-		console.error("Error adding manager to business", error);
-    next(error)
-	}
+  } catch (error) {
+    console.error("Error adding manager:", error);
+    return res.status(HttpStatusCode.InternalServerError).send({ message: "Internal server error." });
+  }
 }
 
 /**

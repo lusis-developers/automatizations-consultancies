@@ -1,6 +1,6 @@
 import mongoose, { Model, Schema, Types } from "mongoose";
 
-interface IClient {
+export interface IClient {
   name: string;
   email: string;
   phone: string;

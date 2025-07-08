@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { generateOnBoardingEmail } from "../emails/generateOnBoarding.email";
 import { generatePaymentConfirmationEmail } from "../emails/generatePayEmail.email";
 import { generateUploadReminderEmail } from "../emails/generateUploadReminderEmail.email";
+import { generateManagerOnboardingEmail } from "../emails/generateManagerOnboarding.email";
 
 class ResendEmail {
   private resend: Resend;
@@ -103,6 +104,37 @@ class ResendEmail {
     } catch (error) {
       console.error("Resend upload reminder email error", error);
       throw new Error(`Problem sending upload reminder email: ${error}`);
+    }
+  }
+
+  public async sendManagerOnboardingEmail(
+    managerEmail: string,
+    managerName: string,
+    ownerName: string,
+    businessName: string,
+    userId: string,
+    businessId: string
+  ): Promise<void> {
+    try {
+      const link = `https://${process.env.FRONTEND_URL}/${userId}/${businessId}`;
+      const content = generateManagerOnboardingEmail(managerName, ownerName, businessName, link);
+
+      const { data, error } = await this.resend.emails.send({
+        to: managerEmail,
+        from: "bakano@bakano.ec",
+        html: content,
+        subject: `Has sido invitado a colaborar en ${businessName} 🚀`,
+      });
+
+      if (error) {
+        throw new CustomError("Problem sending manager onboarding email from resend", 400, error);
+      }
+      
+      console.log(`[Email Service] Onboarding para manager ${managerName} enviado a ${managerEmail}.`);
+
+    } catch (error) {
+      console.error(`[Email Service] Failed to send manager onboarding email: ${error}`);
+      throw new CustomError("Problem sending manager onboarding email", 400, error);
     }
   }
 }
