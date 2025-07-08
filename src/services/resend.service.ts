@@ -7,6 +7,7 @@ import { generatePaymentConfirmationEmail } from "../emails/generatePayEmail.ema
 import { generateUploadReminderEmail } from "../emails/generateUploadReminderEmail.email";
 import { generateManagerOnboardingEmail } from "../emails/generateManagerOnboarding.email";
 import { generateInternalUploadNotificationEmail } from "../emails/InternalNotification/generateInternalUploadNotification.email";
+import { generatePolicyEmail } from "../emails/InternalNotification/generatePolicyEmail.email";
 
 class ResendEmail {
   private resend: Resend;
@@ -170,6 +171,32 @@ class ResendEmail {
     } catch (error) {
       console.error(`[Email Service] Failed to send internal notification for ${businessName}:`, error);
       throw new CustomError("Problem sending internal notification from resend", 400, error);
+    }
+  }
+
+  public async sendPoliciesEmail(
+    recipientName: string,
+    recipientEmail: string,
+  ): Promise<void> {
+    try {
+      const content = generatePolicyEmail(recipientName);
+
+      const { error } = await this.resend.emails.send({
+        to: recipientEmail,
+        from: "legal@bakano.ec", // Usamos un 'from' más apropiado
+        html: content,
+        subject: "Importante: Políticas de Servicio y Privacidad de Bakano Agency",
+      });
+
+      if (error) {
+        throw new CustomError("Problem sending policies email from resend", 400, error);
+      }
+      
+      console.log(`[Email Service] Email de políticas enviado a ${recipientEmail}.`);
+
+    } catch (error) {
+      console.error(`[Email Service] Failed to send policies email to ${recipientEmail}:`, error);
+      throw new CustomError("Problem sending policies email from resend", 400, error);
     }
   }
 }

@@ -54,6 +54,7 @@ export async function addManagerToBusiness(req: Request, res: Response, next: Ne
         business.owner._id.toString(),
         business._id.toString()
       );
+      await resendService.sendPoliciesEmail(name, email);
     } catch (emailError) {
       console.error(`Manager ${name} was added to ${business.name}, but onboarding email failed:`, emailError);
     }
