@@ -1,10 +1,12 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { PagoPluxService } from "../services/pagoplux.service";
 import { v4 as uuidv4 } from "uuid";
 import models from "../models";
 import { PaymentStatus } from "../enums/paymentStatus.enum";
 import { handleIntentPayment } from "../helpers/handleIntentPayment.helper";
 import { handleManualPayment } from "../helpers/handleManualPayment.helper";
+import { Types } from "mongoose";
+import { HttpStatusCode } from "axios";
 
 export async function generatePagopluxPaymentLinkController(
   req: Request,
@@ -105,13 +107,60 @@ export async function receivePaymentController(
 export async function getTransactionsController(
   req: Request,
   res: Response,
+  next: NextFunction
 ): Promise<void> {
   try {
+    const { clientId } = req.params;
+    const {
+      from,
+      to,
+      page = "1",
+      limit = "10"
+    } = req.query;
+
+    if (!Types.ObjectId.isValid(clientId)) {
+      res.status(HttpStatusCode.BadRequest).send({ message: "The provided clientId in the URL is invalid." });
+      return;
+    }
+
+    // El resto de la lógica es EXACTAMENTE LA MISMA
+    const filter: Record<string, any> = {
+      clientId: new Types.ObjectId(clientId)
+    };
+
+    if (from || to) {
+      filter.date = {};
+      if (from && !isNaN(Date.parse(from as string))) {
+        filter.date.$gte = new Date(from as string);
+      }
+      if (to && !isNaN(Date.parse(to as string))) {
+        filter.date.$lte = new Date(to as string);
+      }
+    }
+
+    const pageNumber = Math.max(1, parseInt(page as string, 10));
+    const pageSize = Math.max(1, parseInt(limit as string, 10));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const [transactions, total] = await Promise.all([
+      models.transactions.find(filter).sort({ date: -1 }).skip(skip).limit(pageSize),
+      models.transactions.countDocuments(filter),
+    ]);
+
+    res.status(HttpStatusCode.Ok).send({
+      message: "Transactions fetched successfully.",
+      data: transactions,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
+
   } catch (error: unknown) {
-    console.error("[Webhook - Error Fatal]", error);
-    const message =
-      error instanceof Error ? error.message : "Error desconocido";
-    res.status(500).send({ message });
+    console.error("[Transactions - Get Error]", error);
+    next(error);
   }
 }
 
@@ -296,5 +345,42 @@ export async function getPaymentsSummaryController(
     console.error('[Payments - Summary Error]', error)
     const message = error instanceof Error ? error.message : 'Unknown error'
     res.status(500).json({ message })
+  }
+}
+
+export async function deleteTransactionController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { transactionId } = req.params;
+
+    if (!Types.ObjectId.isValid(transactionId)) {
+      res.status(HttpStatusCode.BadRequest).send({ message: "Invalid transaction ID." });
+      return;
+    }
+ 
+    const deletedTransaction = await models.transactions.findByIdAndDelete(transactionId);
+
+    if (!deletedTransaction) {
+      res.status(HttpStatusCode.NotFound).send({ message: "Transaction not found." });
+      return;
+    }
+
+    if (deletedTransaction.clientId) {
+      await models.clients.updateOne(
+        { _id: deletedTransaction.clientId },
+        { $pull: { transactions: deletedTransaction._id } }
+      );
+    }
+
+
+    res.status(HttpStatusCode.Ok).send({ message: "Transaction successfully deleted.", deletedTransaction});
+
+    return
+  } catch (error: unknown) {
+    console.error("[Transactions - Delete Error]", error);
+    next(error)
   }
 }
