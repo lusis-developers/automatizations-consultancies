@@ -356,3 +356,97 @@ export async function getAllMeetings(req: Request, res: Response, next: NextFunc
     next(error);
   }
 }
+
+export async function getUnassignedMeetingsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { page = "1", limit = "10" } = req.query;
+
+    const pageNumber = Math.max(1, parseInt(page as string, 10));
+    const pageSize = Math.max(1, parseInt(limit as string, 10));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const filter = { client: { $in: [null, undefined] } };
+
+    const [unassignedMeetings, total] = await Promise.all([
+      models.meetings
+        .find(filter)
+        .sort({ scheduledTime: 1 })
+        .skip(skip)
+        .limit(pageSize),
+      models.meetings.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      data: unassignedMeetings,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
+  } catch (error: unknown) {
+    console.error("Error getting unassigned meetings:", error);
+    next(error);
+  }
+}
+
+export async function assignMeetingController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { meetingId } = req.params;
+    const { clientId } = req.body;
+
+    if (!Types.ObjectId.isValid(meetingId) || !Types.ObjectId.isValid(clientId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: "Meeting ID or Client ID is invalid." 
+      });
+      return;
+    }
+
+    const [meetingToAssign, client] = await Promise.all([
+      models.meetings.findById(meetingId),
+      models.clients.findById(clientId)
+    ]);
+
+    if (!meetingToAssign) {
+      res.status(HttpStatusCode.NotFound).send({ 
+        message: "Meeting not found or already assigned." 
+      });
+      return;
+    }
+    if (!client) {
+      res.status(HttpStatusCode.NotFound).send({ 
+        message: "Client not found." 
+      });
+      return;
+    }
+
+    meetingToAssign.client = client;
+    client.meetings.push(meetingToAssign._id);
+
+    await Promise.all([
+      meetingToAssign.save(),
+      client.save()
+    ]);
+
+    console.log(`Meeting ${meetingToAssign._id} successfully assigned to client ${client.email}`);
+
+    res.status(HttpStatusCode.Ok).send({
+      message: "Meeting successfully assigned.",
+      data: meetingToAssign,
+    });
+
+    return
+  } catch (error: unknown) {
+    console.error("Error assigning meeting:", error);
+    next(error);
+  }
+}

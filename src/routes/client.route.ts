@@ -1,5 +1,5 @@
 import express from "express";
-import { confirmStrategyMeeting, getAllMeetings, getClientAndBusiness, getClientById, getClientMeetingStatus, getClientsController, handleAppointmentWebhook } from "../controllers/client.controller";
+import { assignMeetingController, confirmStrategyMeeting, getAllMeetings, getClientAndBusiness, getClientById, getClientMeetingStatus, getClientsController, getUnassignedMeetingsController, handleAppointmentWebhook } from "../controllers/client.controller";
 
 const router = express.Router();
 
@@ -22,5 +22,9 @@ router.post(
 router.get(
   '/client/:clientId/all-meetings', getAllMeetings
 )
+
+router.get('/client/meeting/unassigned', getUnassignedMeetingsController)
+
+router.patch('/client/meetings/:meetingId/asign', assignMeetingController)
 
 export default router;

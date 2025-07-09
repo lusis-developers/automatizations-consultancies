@@ -1,8 +1,9 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { MeetingStatus, MeetingType } from "../enums/meetingStatus.enum";
+import { IClient } from "./clients.model";
 
 export interface IMeeting extends Document {
-	client?: Schema.Types.ObjectId | string;
+	client?: Schema.Types.ObjectId | string | IClient;
 	assignedTo: string;
 	status: MeetingStatus;
 	meetingType: MeetingType;
