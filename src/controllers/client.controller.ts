@@ -4,6 +4,7 @@ import { HttpStatusCode } from "axios";
 import { MeetingStatus, MeetingType } from "../enums/meetingStatus.enum";
 import { Types } from "mongoose";
 import { IMeeting } from "../models/meeting.model";
+import { IClient } from "../models/clients.model";
 
 export async function getClientAndBusiness(
   req: Request,
@@ -115,66 +116,59 @@ export async function handleAppointmentWebhook(
 ): Promise<void> {
   try {
     const { email, phone, calendar } = req.body;
-
-    // 1. Validar que el payload del calendario es correcto
     if (!calendar || !calendar.appointmentId) {
-      console.log("Webhook ignorado: Datos de calendario incompletos.");
-      res.status(200).json({ message: "Datos de calendario incompletos." });
+      console.log("[Webhook] Ignored: Incomplete calendar data.");
+      res.status(HttpStatusCode.Ok).send({ message: "Incomplete calendar data." });
       return;
     }
 
-    // 2. Prevenir duplicados (Idempotencia)
     const existingMeeting = await models.meetings.findOne({ sourceId: calendar.appointmentId });
     if (existingMeeting) {
-      console.log(`Webhook ignorado: La reunión con ID ${calendar.appointmentId} ya existe.`);
-      res.status(200).json({ message: "Reunión ya procesada." });
+      console.log(`[Webhook] Ignored: Meeting with ID ${calendar.appointmentId} already exists.`);
+      res.status(HttpStatusCode.Ok).send({ message: "Meeting already processed." });
       return;
     }
 
-    // 3. Buscar al cliente (lógica multi-criterio)
+    let client: IClient | null = null;
     const searchCriteria = [];
     if (email) searchCriteria.push({ email: email.toLowerCase() });
     if (phone) {
       const normalizedPhone = phone.replace(/[\s\-()+\D]/g, '');
       searchCriteria.push({ phone: new RegExp(normalizedPhone + '$') });
     }
-    const client = await models.clients.findOne({ $or: searchCriteria });
-    if (!client) {
-      console.warn(`Cliente no encontrado para la cita ${calendar.appointmentId}`);
-      res.status(404).json({ message: "Cliente no encontrado." });
-      return;
+
+    if (searchCriteria.length > 0) {
+      client = await models.clients.findOne({ $or: searchCriteria });
     }
 
-    // 4. Identificar al experto y el tipo de reunión
-    // CORRECCIÓN: Se inicializan las variables con null para solucionar el error de TypeScript
+    if (!client && email) {
+      console.log(`[Webhook] Client not found. Searching manager with email: ${email}`);
+      const businessWithManager = await models.business.findOne({ "managers.email": email.toLowerCase() });
+      
+      if (businessWithManager) {
+        console.log(`[Webhook] Manager found in business ${businessWithManager.name}. Getting owner client...`);
+        client = await models.clients.findById(businessWithManager.owner);
+      }
+    }
+
     let assignedToExpertName: string | null = null;
     let meetingType: MeetingType | null = null;
 
-    // Asignamos los valores basados en el nombre del calendario
     if (calendar.calendarName === "MEETING ACCESO PORTAFOLIO EMPRESARIAL") {
       assignedToExpertName = "Denisse Quimi";
       meetingType = MeetingType.PORTFOLIO_ACCESS;
     } else if (calendar.calendarName === "PRIMER MEETING CON EXPERTO ANALISIS DE DATOS (LUIS)") {
       assignedToExpertName = "Luis Reyes";
-      meetingType = MeetingType.DATA_STRATEGY; // Usamos el tipo de reunión que corresponde
-    } else {
-      // Aquí podrías añadir lógica para otros calendarios en el futuro
-      // Ejemplo:
-      // } else if (calendar.calendarName === "REUNIÓN DE DATOS") {
-      //   assignedToExpertName = "Luis Reyes";
-      //   meetingType = MeetingType.DATA_STRATEGY;
+      meetingType = MeetingType.DATA_STRATEGY;
     }
 
-    // Si el calendario no es reconocido, no continuamos. La validación ahora es segura.
     if (!assignedToExpertName || !meetingType) {
-        console.warn(`Tipo de calendario no reconocido: ${calendar.calendarName}`);
-        res.status(200).json({message: "Tipo de calendario no manejado."});
+        console.warn(`[Webhook] Unrecognized calendar type: ${calendar.calendarName}`);
+        res.status(HttpStatusCode.Ok).send({message: "Unhandled calendar type."});
         return;
     }
 
-    // 5. Crear el nuevo documento de Reunión
-    const newMeeting = new models.meetings({
-      client: client._id,
+    const meetingData: Partial<IMeeting> = {
       assignedTo: assignedToExpertName,
       status: MeetingStatus.SCHEDULED,
       meetingType: meetingType,
@@ -182,22 +176,32 @@ export async function handleAppointmentWebhook(
       endTime: new Date(calendar.endTime),
       meetingLink: calendar.address,
       sourceId: calendar.appointmentId,
-    });
+    };
+
+    if (client) {
+      meetingData.client = client._id;
+    } else {
+      // Level 3: Store orphaned meeting if no client found
+      console.warn(`[Webhook] No client or manager found for appointment ${calendar.appointmentId}. Creating unassigned meeting.`);
+      meetingData.attendeeEmail = email;
+      meetingData.attendeePhone = phone;
+    }
     
-    // 6. Guardar la nueva reunión en la base de datos
-    await newMeeting.save();
+    // 6. Save new meeting
+    const newMeeting = await models.meetings.create(meetingData);
 
-    // 7. Asociar la nueva reunión con el cliente, añadiendo su ID al array
-    client.meetings.push(newMeeting._id);
-    await client.save();
+    // 7. Associate meeting with client if found
+    if (client) {
+      client.meetings.push(newMeeting._id);
+      await client.save();
+      console.log(`[Webhook] New meeting created and associated with client ${client.email}`);
+    }
 
-    console.log(`Nueva reunión de tipo '${meetingType}' con '${assignedToExpertName}' creada y asociada al cliente ${client.email}`);
-
-    // 8. Enviar respuesta de éxito
-    res.status(200).json({ message: "Reunión creada y asociada exitosamente." });
+    // 8. Send success response
+    res.status(HttpStatusCode.Ok).send({ message: "Webhook processed successfully." });
 
   } catch (error: unknown) {
-    console.error("Error en el webhook de citas (versión refactorizada):", error);
+    console.error("Error in appointment webhook:", error);
     next(error);
   }
 }
@@ -278,7 +282,7 @@ export async function confirmStrategyMeeting(req: Request, res: Response, next: 
       return
     }
     const portfolioMeeting = await models.meetings.findById(portfolioMeetingId);
-    if (!portfolioMeeting || portfolioMeeting.client.toString() !== clientId || portfolioMeeting.meetingType !== MeetingType.PORTFOLIO_ACCESS) {
+    if (!portfolioMeeting || portfolioMeeting.client!.toString() !== clientId || portfolioMeeting.meetingType !== MeetingType.PORTFOLIO_ACCESS) {
       res.status(404).json({ message: "La reunión de acceso especificada no es válida o no corresponde a este cliente." });
       return
     }
@@ -349,6 +353,100 @@ export async function getAllMeetings(req: Request, res: Response, next: NextFunc
 
   } catch (error: unknown) {
     console.error("Error al obtener todas las reuniones del cliente:", error);
+    next(error);
+  }
+}
+
+export async function getUnassignedMeetingsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { page = "1", limit = "10" } = req.query;
+
+    const pageNumber = Math.max(1, parseInt(page as string, 10));
+    const pageSize = Math.max(1, parseInt(limit as string, 10));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const filter = { client: { $in: [null, undefined] } };
+
+    const [unassignedMeetings, total] = await Promise.all([
+      models.meetings
+        .find(filter)
+        .sort({ scheduledTime: 1 })
+        .skip(skip)
+        .limit(pageSize),
+      models.meetings.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      data: unassignedMeetings,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
+  } catch (error: unknown) {
+    console.error("Error getting unassigned meetings:", error);
+    next(error);
+  }
+}
+
+export async function assignMeetingController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { meetingId } = req.params;
+    const { clientId } = req.body;
+
+    if (!Types.ObjectId.isValid(meetingId) || !Types.ObjectId.isValid(clientId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: "Meeting ID or Client ID is invalid." 
+      });
+      return;
+    }
+
+    const [meetingToAssign, client] = await Promise.all([
+      models.meetings.findById(meetingId),
+      models.clients.findById(clientId)
+    ]);
+
+    if (!meetingToAssign) {
+      res.status(HttpStatusCode.NotFound).send({ 
+        message: "Meeting not found or already assigned." 
+      });
+      return;
+    }
+    if (!client) {
+      res.status(HttpStatusCode.NotFound).send({ 
+        message: "Client not found." 
+      });
+      return;
+    }
+
+    meetingToAssign.client = client;
+    client.meetings.push(meetingToAssign._id);
+
+    await Promise.all([
+      meetingToAssign.save(),
+      client.save()
+    ]);
+
+    console.log(`Meeting ${meetingToAssign._id} successfully assigned to client ${client.email}`);
+
+    res.status(HttpStatusCode.Ok).send({
+      message: "Meeting successfully assigned.",
+      data: meetingToAssign,
+    });
+
+    return
+  } catch (error: unknown) {
+    console.error("Error assigning meeting:", error);
     next(error);
   }
 }
