@@ -5,6 +5,7 @@ import {
   getTransactionsController,
   getPagopluxPaymentIntentsController,
   getPaymentsSummaryController,
+  deleteTransactionController,
 } from "../controllers/payments.controllers";
 
 const router = express.Router();
@@ -16,10 +17,12 @@ router.post(
 
 router.post("/webhook/receive-payment", receivePaymentController);
 
-router.post("/transactions", getTransactionsController);
+router.get("/clients/:clientId/transactions", getTransactionsController);
 
 router.get("/pagoplux/payment-intents", getPagopluxPaymentIntentsController);
 
 router.get("/payments/summary", getPaymentsSummaryController);
+
+router.delete("/transactions/:transactionId", deleteTransactionController);
 
 export default router;
