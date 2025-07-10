@@ -1,9 +1,11 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { MeetingStatus, MeetingType } from "../enums/meetingStatus.enum";
 import { IClient } from "./clients.model";
+import { IBusiness } from "./business.model";
 
 export interface IMeeting extends Document {
 	client?: Schema.Types.ObjectId | string | IClient;
+	business?: Schema.Types.ObjectId | IBusiness;
 	assignedTo: string;
 	status: MeetingStatus;
 	meetingType: MeetingType;
@@ -24,6 +26,11 @@ const MeetingSchema: Schema<IMeeting> = new Schema(
 			ref: "clients",
 			required: false,
 		},
+		business: {
+      type: Schema.Types.ObjectId,
+      ref: "business",
+      required: false,
+    },
 		assignedTo: {
 			type: String,
 			required: true,
