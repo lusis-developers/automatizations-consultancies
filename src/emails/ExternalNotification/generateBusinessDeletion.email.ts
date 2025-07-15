@@ -1,5 +1,3 @@
-// src/emails/generateBusinessDeletion.email.ts
-
 /**
  * Genera el HTML para el email de notificación de eliminación de un negocio.
  * @param businessName - El nombre del negocio eliminado.
