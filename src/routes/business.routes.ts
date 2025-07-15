@@ -2,6 +2,7 @@ import express from "express";
 import { editBusinessData, receiveConsultancyData, sendDataUploadReminders } from "../controllers/businesses.controller";
 import { upload } from "../middlewares/upload.middleware";
 import { addManagerToBusiness, getBusinessManagers, removeManagerFromBusiness } from "../controllers/manager.controller";
+import { deleteBusinessAndNotifyController } from "../controllers/client.controller";
 
 const router = express.Router();
 
@@ -35,6 +36,11 @@ router.get(
 router.delete(
   "/business/:businessId/managers/:managerId",
   removeManagerFromBusiness
+)
+
+router.delete(
+  "/business/:businessId",
+  deleteBusinessAndNotifyController
 )
 
 export default router;
