@@ -8,6 +8,7 @@ import { generateUploadReminderEmail } from "../emails/generateUploadReminderEma
 import { generateManagerOnboardingEmail } from "../emails/generateManagerOnboarding.email";
 import { generateInternalUploadNotificationEmail } from "../emails/InternalNotification/generateInternalUploadNotification.email";
 import { generatePolicyEmail } from "../emails/InternalNotification/generatePolicyEmail.email";
+import { generateDataDeletionConfirmationEmail } from "../emails/ExternalNotification/removeDataClient.email";
 
 class ResendEmail {
   private resend: Resend;
