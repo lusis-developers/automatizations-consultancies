@@ -1,6 +1,7 @@
 import { Response } from "express";
 import models from "../models"; // Asegúrate que la ruta a tus modelos es correcta
 import ResendEmail from "../services/resend.service"; // Asegúrate que la ruta a tu servicio de email es correcta
+import { BusinessTypeEnum } from "../enums/businessType.enum";
 
 // El enum de métodos de pago para mantener la consistencia
 export enum PayMethod {
@@ -20,6 +21,7 @@ export interface ManualPaymentBody {
   country?: string;
   bank?: string;
   businessName: string;
+  businessType: BusinessTypeEnum;
   paymentMethod: PayMethod;
 }
 
@@ -80,6 +82,11 @@ export async function handleManualPayment(
     let business;
     let wasNewBusinessCreated = false;
 
+    if (!body.businessType || !Object.values(BusinessTypeEnum).includes(body.businessType)) {
+      res.status(400).send({ message: `El tipo de negocio '${body.businessType}' no es válido.` });
+      return;
+    }
+
     business = await models.business.findOne({
       owner: cliente._id,
       name: body.businessName
@@ -88,6 +95,7 @@ export async function handleManualPayment(
     if (!business) {
 		business = await models.business.create({
 			name: body.businessName,
+      businessType: body.businessType,
 			owner: cliente._id,
 			ruc: body.clientId || "",
 			email: body.email,

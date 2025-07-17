@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
+import { BusinessTypeEnum } from "../enums/businessType.enum";
 
 
 export interface IManager extends Document {
@@ -32,14 +33,14 @@ export interface IBusiness extends Document {
 	name: string;
 	ruc: string;
 	address: string;
+	businessType: BusinessTypeEnum;
 	phone: string;
 	email: string;
 	managers: IManager[]
 	owner: Schema.Types.ObjectId;
 	createdAt: Date;
 	updatedAt: Date;
-	// Nuevos campos de la consultoría
-	instagram?: string; // Hacemos los campos opcionales
+	instagram?: string;
 	tiktok?: string;
 	empleados?: string;
 	ingresoMensual?: string;
@@ -205,7 +206,12 @@ const BusinessSchema = new Schema<IBusiness>(
       type: Boolean,
       required: false,
       default: false
-		}
+		},
+		businessType: {
+			type: String,
+			enum: Object.values(BusinessTypeEnum),
+			required: true
+		},
 	},
 	{
 		timestamps: true,
