@@ -8,6 +8,7 @@ import ResendEmail from "../services/resend.service";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 import { HttpStatusCode } from "axios";
 import { IClient } from "../models/clients.model";
+import { IManager } from "../models/business.model";
 
 export async function receiveConsultancyData(
   req: Request,
@@ -221,6 +222,81 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
     });
   } catch (error) {
     console.error("Error in reminder sending process:", error);
+    next(error);
+  }
+}
+
+export async function deleteBusinessAndNotifyController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { businessId } = req.params;
+
+    if (!Types.ObjectId.isValid(businessId)) {
+      res.status(HttpStatusCode.BadRequest).send({ message: "Invalid business ID" });
+      return;
+    }
+
+    const business = await models.business.findById(businessId)
+      .populate<{ owner: IClient }>('owner')
+      .populate<{ managers: IManager[] }>('managers');
+
+    if (!business) {
+      res.status(HttpStatusCode.NotFound).send({ message: "Business not found" });
+      return;
+    }
+
+    const businessName = business.name;
+    const owner = business.owner;
+    const managers = business.managers;
+
+    const recipientEmails: string[] = [];
+    if (owner && owner.email) {
+      recipientEmails.push(owner.email);
+    }
+    if (managers && managers.length > 0) {
+      managers.forEach(manager => {
+        if (manager.email) {
+          recipientEmails.push(manager.email);
+        }
+      });
+    }
+
+    await models.business.findByIdAndDelete(businessId);
+    if (owner) {
+      await models.clients.updateOne(
+        { _id: owner._id },
+        { $pull: { businesses: business._id } }
+      );
+    }
+
+    try {
+      const driveService = new GoogleDriveService(
+        path.resolve(__dirname, "../credentials/bakano-mvp-generate-content-4618d04c0dde.json"),
+        "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL"
+      );
+      await driveService.deleteFolderByName(businessName);
+    } catch (driveError) {
+      console.error(`[Business Controller] Error initializing or using GoogleDriveService:`, driveError);
+    }
+
+    if (recipientEmails.length > 0) {
+      const resendService = new ResendEmail();
+      await resendService.sendBusinessDeletionEmail(
+        businessName,
+        owner.name,
+        recipientEmails,
+      );
+    }
+
+    res.status(HttpStatusCode.Ok).send({
+      message: `Business '${businessName}' deleted. Owner and managers have been notified.`,
+    });
+
+  } catch (error: unknown) {
+    console.error("[Business - Delete Error]", error);
     next(error);
   }
 }
