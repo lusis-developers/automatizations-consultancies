@@ -117,6 +117,8 @@ export async function handleAppointmentWebhook(
 ): Promise<void> {
   try {
     const { email, phone, calendar } = req.body;
+
+    console.log('req.body: ', req.body)
     if (!calendar || !calendar.appointmentId) {
       console.log("[Webhook] Ignored: Incomplete calendar data.");
       res.status(HttpStatusCode.Ok).send({ message: "Incomplete calendar data." });
@@ -186,6 +188,8 @@ export async function handleAppointmentWebhook(
       endTime: new Date(calendar.endTime),
       meetingLink: calendar.address,
       sourceId: calendar.appointmentId,
+      attendeeEmail: email,
+      attendeePhone: phone,
     };
 
     if (client) {

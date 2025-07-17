@@ -8,6 +8,8 @@ import { generateUploadReminderEmail } from "../emails/generateUploadReminderEma
 import { generateManagerOnboardingEmail } from "../emails/generateManagerOnboarding.email";
 import { generateInternalUploadNotificationEmail } from "../emails/InternalNotification/generateInternalUploadNotification.email";
 import { generatePolicyEmail } from "../emails/InternalNotification/generatePolicyEmail.email";
+import { generateDataDeletionConfirmationEmail } from "../emails/ExternalNotification/removeDataClient.email";
+import { generateBusinessDeletionEmail } from "../emails/ExternalNotification/generateBusinessDeletion.email";
 
 class ResendEmail {
   private resend: Resend;
@@ -198,6 +200,38 @@ class ResendEmail {
     } catch (error) {
       console.error(`[Email Service] Failed to send policies email to ${recipientEmail}:`, error);
       throw new CustomError("Problem sending policies email from resend", 400, error);
+    }
+  }
+
+  public async sendBusinessDeletionEmail(
+    businessName: string,
+    ownerName: string,
+    recipients: string[],
+  ): Promise<void> {
+    try {
+      if (!recipients || recipients.length === 0) {
+        console.warn(`[Email Service] No se proporcionaron destinatarios para la notificación de eliminación del negocio ${businessName}.`);
+        return;
+      }
+
+      const content = generateBusinessDeletionEmail(businessName, ownerName);
+
+      const { error } = await this.resend.emails.send({
+        to: recipients,
+        from: "notificaciones@bakano.ec",
+        html: content,
+        subject: `Notificación Importante: Eliminación de datos del negocio '${businessName}'`,
+      });
+
+      if (error) {
+        throw new CustomError("Problem sending business deletion email from resend", 400, error);
+      }
+      
+      console.log(`[Email Service] Email de eliminación del negocio ${businessName} enviado a: ${recipients.join(", ")}.`);
+
+    } catch (error) {
+      console.error(`[Email Service] Failed to send business deletion email for ${businessName}:`, error);
+      throw new CustomError("Problem sending business deletion email", 500, error);
     }
   }
 }
