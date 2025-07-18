@@ -150,12 +150,9 @@ export async function handleAppointmentWebhook(
       const businessesWithManager = await models.business.find({ "managers.email": email.toLowerCase() });
       
       if (businessesWithManager.length === 1) {
-        // Caso ideal: El manager está en un solo negocio.
         businessToAssign = businessesWithManager[0];
         client = await models.clients.findById(businessToAssign.owner);
-        console.log(`[Webhook] Manager found in a single business. Auto-assigning to ${businessToAssign.name}`);
       } else if (businessesWithManager.length > 1) {
-        // Caso ambiguo: El manager está en varios negocios. No se puede auto-asignar.
         console.log(`[Webhook] Manager with email ${email} exists in multiple businesses. Meeting requires manual assignment.`);
       }
     }
