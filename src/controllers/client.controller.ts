@@ -6,6 +6,7 @@ import { Types } from "mongoose";
 import { IMeeting } from "../models/meeting.model";
 import { IClient } from "../models/clients.model";
 import { IBusiness } from "../models/business.model";
+import { MeetingService } from "../services/meeting.service";
 
 export async function getClientAndBusiness(
   req: Request,
@@ -146,10 +147,13 @@ export async function handleAppointmentWebhook(
     }
 
     if (!client && email) {
-      const businessWithManager = await models.business.findOne({ "managers.email": email.toLowerCase() });
-      if (businessWithManager) {
-        businessToAssign = businessWithManager;
-        client = await models.clients.findById(businessWithManager.owner);
+      const businessesWithManager = await models.business.find({ "managers.email": email.toLowerCase() });
+      
+      if (businessesWithManager.length === 1) {
+        businessToAssign = businessesWithManager[0];
+        client = await models.clients.findById(businessToAssign.owner);
+      } else if (businessesWithManager.length > 1) {
+        console.log(`[Webhook] Manager with email ${email} exists in multiple businesses. Meeting requires manual assignment.`);
       }
     }
 
@@ -157,7 +161,7 @@ export async function handleAppointmentWebhook(
       const clientBusinesses = await models.business.find({ owner: client._id });
       if (clientBusinesses.length === 1) {
         businessToAssign = clientBusinesses[0];
-        console.log(`[Webhook] Client with one business. Auto-assigning to ${businessToAssign.name}`);
+        console.log(`[Webhook] Client has only one business. Auto-assigning to ${businessToAssign.name}`);
       } else {
         console.log(`[Webhook] Client ${client.email} has ${clientBusinesses.length} businesses. Meeting requires manual business assignment.`);
       }
@@ -206,10 +210,12 @@ export async function handleAppointmentWebhook(
 
     const newMeeting = await models.meetings.create(meetingData);
 
-    if (client) {
+   if (client) {
       client.meetings.push(newMeeting._id);
       await client.save();
       console.log(`[Webhook] New meeting created and associated with client ${client.email}`);
+    } else {
+      console.warn(`[Webhook] No client or unique manager found for appointment ${calendar.appointmentId}. Creating unassigned meeting.`);
     }
 
     res.status(HttpStatusCode.Ok).send({ message: "Webhook processed successfully." });
@@ -290,7 +296,6 @@ export async function confirmStrategyMeeting(req: Request, res: Response, next: 
     const { clientId } = req.params;
     const { portfolioMeetingId } = req.body;
 
-    // Validaciones de seguridad
     if (!Types.ObjectId.isValid(clientId) || !Types.ObjectId.isValid(portfolioMeetingId)) {
       res.status(400).json({ message: "IDs de cliente o reunión no válidos." });
       return
@@ -301,12 +306,10 @@ export async function confirmStrategyMeeting(req: Request, res: Response, next: 
       return
     }
 
-    // Paso 1: Completar la reunión actual
     portfolioMeeting.status = MeetingStatus.COMPLETED;
     await portfolioMeeting.save();
     console.log(`Reunión de portafolio ${portfolioMeetingId} marcada como completada.`);
 
-    // Verificamos si la reunión de estrategia ya fue creada para no duplicarla
     const existingStrategyMeeting = await models.meetings.findOne({
         client: clientId,
         meetingType: MeetingType.DATA_STRATEGY,
@@ -321,23 +324,20 @@ export async function confirmStrategyMeeting(req: Request, res: Response, next: 
       return
     }
 
-    // Paso 2: Crear la nueva reunión en estado "pendiente"
     const newStrategyMeeting = new models.meetings({
         client: clientId,
         assignedTo: "Luis Reyes (Experto en Estrategia)",
-        status: MeetingStatus.PENDING_SCHEDULE, // <-- El estado clave
+        status: MeetingStatus.PENDING_SCHEDULE,
         meetingType: MeetingType.DATA_STRATEGY,
     });
     await newStrategyMeeting.save();
 
-    // Paso 3: Asociar la nueva reunión al cliente
     await models.clients.findByIdAndUpdate(clientId, {
         $push: { meetings: newStrategyMeeting._id }
     });
     
     console.log(`Nueva reunión de Estrategia (pendiente) creada para el cliente ${clientId}`);
 
-    // Devolvemos la información de la nueva reunión creada
     res.status(200).json({ 
       message: "Acceso a portafolio confirmado y reunión de estrategia habilitada.",
       strategyMeeting: newStrategyMeeting 
@@ -419,63 +419,28 @@ export async function assignMeetingController(
     const { clientId, businessId } = req.body;
 
     if (!Types.ObjectId.isValid(meetingId) || !Types.ObjectId.isValid(clientId)) {
-      res.status(HttpStatusCode.BadRequest).send({ message: "Meeting ID or client ID is invalid." });
+      res.status(HttpStatusCode.BadRequest).send({ message: "Meeting ID or Client ID is invalid." });
       return;
     }
     if (businessId && !Types.ObjectId.isValid(businessId)) {
-      res.status(HttpStatusCode.BadRequest).send({ message: "The provided business ID is invalid." });
+      res.status(HttpStatusCode.BadRequest).send({ message: "The provided Business ID is invalid." });
       return;
     }
 
-    const [meeting, client, business] = await Promise.all([
-      models.meetings.findOne({ _id: meetingId, client: { $in: [null, undefined] } }),
-      models.clients.findById(clientId),
-      businessId ? models.business.findById(businessId) : Promise.resolve(null)
-    ]);
-
-    if (!meeting) {
-      res.status(HttpStatusCode.NotFound).send({ message: "Meeting not found or already has an assigned client." });
-      return;
-    }
-    if (!client) {
-      res.status(HttpStatusCode.NotFound).send({ message: "Client not found." });
-      return;
-    }
-    if (businessId && !business) {
-        res.status(HttpStatusCode.NotFound).send({ message: "Business not found." });
-        return;
-    }
-    if (business) {
-      if (business.owner.toString() !== client._id.toString()) {
-        res.status(HttpStatusCode.Conflict).send({ message: "Assignment error: This business does not belong to the selected client." });
-        return;
-      }
-    }
-    
-    meeting.client = client;
-    if (business) {
-      meeting.business = business;
-    }
-    
-    client.meetings.push(meeting._id);
-
-    await Promise.all([
-      meeting.save(),
-      client.save()
-    ]);
-
-    console.log(`Meeting ${meeting._id} successfully assigned to client ${client.email}`);
-    if(business) {
-        console.log(`... and to business ${business.name}`);
-    }
+    const meetingService = new MeetingService();
+    const updatedMeeting = await meetingService.assignMeetingToClient(
+      meetingId,
+      clientId,
+      businessId,
+    );
 
     res.status(HttpStatusCode.Ok).send({
       message: "Meeting successfully assigned.",
-      data: meeting,
+      data: updatedMeeting,
     });
 
   } catch (error: unknown) {
-    console.error("Error assigning meeting:", error);
+    console.error("Error in assignMeetingController:", error);
     next(error);
   }
 }
