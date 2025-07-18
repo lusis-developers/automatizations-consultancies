@@ -9,6 +9,7 @@ import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 import { HttpStatusCode } from "axios";
 import { IClient } from "../models/clients.model";
 import { IManager } from "../models/business.model";
+import { BusinessTypeEnum } from "../enums/businessType.enum";
 
 export async function receiveConsultancyData(
   req: Request,
@@ -43,6 +44,11 @@ export async function receiveConsultancyData(
       }
       res.status(HttpStatusCode.BadRequest).send({ message: "Negocio no encontrado con ese ID" });
       return;
+    }
+    
+    if (!business.businessType) {
+      console.log(`[Backward Compatibility] El negocio '${business.name}' no tenía businessType. Asignando uno.`);
+      business.businessType = req.body.businessType || BusinessTypeEnum.OTHER;
     }
 
     const businessFolderId = await driveService.ensureSubfolder(business.name);
