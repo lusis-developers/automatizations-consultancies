@@ -91,7 +91,7 @@ export async function handleManualPayment(
           name: body.businessName,
           businessType: body.businessType,
           owner: cliente._id,
-          ruc: body.clientId || "",
+          ruc: null,
           email: body.email,
           phone: body.phone,
           address: "Sin dirección",
