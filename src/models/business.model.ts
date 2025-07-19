@@ -77,6 +77,7 @@ const BusinessSchema = new Schema<IBusiness>(
 			required: false,
 			trim: true,
 			unique: true,
+			sparse: true
 		},
 		address: {
 			type: String,
