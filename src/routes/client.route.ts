@@ -1,6 +1,7 @@
 import express from "express";
 import {
 	assignMeetingController,
+	completeDataStrategyMeeting,
 	confirmStrategyMeeting,
 	getAllMeetings,
 	getClientAndBusiness,
@@ -26,6 +27,11 @@ router.get("/clients/:clientId/meeting-status", getClientMeetingStatus);
 router.post(
 	"/client/:clientId/confirm-strategy-meeting",
 	confirmStrategyMeeting
+);
+
+router.post(
+  "/client/:clientId/complete-data-strategy-meeting",
+  completeDataStrategyMeeting,
 );
 
 router.get("/client/:clientId/all-meetings", getAllMeetings);

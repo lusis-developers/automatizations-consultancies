@@ -7,6 +7,7 @@ import { IMeeting } from "../models/meeting.model";
 import { IClient } from "../models/clients.model";
 import { IBusiness } from "../models/business.model";
 import { MeetingService } from "../services/meeting.service";
+import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 
 export async function getClientAndBusiness(
   req: Request,
@@ -441,6 +442,92 @@ export async function assignMeetingController(
 
   } catch (error: unknown) {
     console.error("Error in assignMeetingController:", error);
+    next(error);
+  }
+}
+
+/**
+ * @description Marca una reunión de estrategia de datos (con Luis Reyes) como completada y finaliza el proceso de onboarding del negocio asociado.
+ * @route POST /api/client/:clientId/complete-data-strategy-meeting
+ * @access Private (Debe ser llamado por el frontend de administración)
+ */
+export async function completeDataStrategyMeeting(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { clientId } = req.params;
+    const { strategyMeetingId } = req.body as { strategyMeetingId: string };
+
+    if (
+      !Types.ObjectId.isValid(clientId) ||
+      !Types.ObjectId.isValid(strategyMeetingId)
+    ) {
+      res
+        .status(HttpStatusCode.BadRequest)
+        .json({ message: "El ID del cliente o de la reunión no es válido." });
+      return;
+    }
+
+    const strategyMeeting = await models.meetings
+      .findById(strategyMeetingId)
+      .populate("business");
+
+    if (
+      !strategyMeeting ||
+      strategyMeeting.client?.toString() !== clientId ||
+      strategyMeeting.meetingType !== MeetingType.DATA_STRATEGY
+    ) {
+      res.status(HttpStatusCode.NotFound).send({
+        message:
+          "La reunión de estrategia de datos especificada no es válida o no corresponde a este cliente.",
+      });
+      return;
+    }
+
+    if (strategyMeeting.status === MeetingStatus.COMPLETED) {
+      res.status(HttpStatusCode.Ok).send({
+        message: "Esta reunión ya fue marcada como completada previamente.",
+        meeting: strategyMeeting,
+      });
+      return;
+    }
+
+    strategyMeeting.status = MeetingStatus.COMPLETED;
+
+    const businessToUpdate = strategyMeeting.business as IBusiness;
+    if (businessToUpdate) {
+      businessToUpdate.onboardingStep = OnboardingStepEnum.ONBOARDING_COMPLETE;
+    }
+
+    await Promise.all([
+      strategyMeeting.save(),
+      businessToUpdate ? businessToUpdate.save() : Promise.resolve(),
+    ]);
+
+    console.log(
+      `[Onboarding] Reunión de estrategia ${strategyMeetingId} completada.`,
+    );
+    if (businessToUpdate) {
+      console.log(
+        `[Onboarding] Negocio ${businessToUpdate.name} (${businessToUpdate._id}) ha completado el onboarding.`,
+      );
+    }
+
+    res.status(HttpStatusCode.Ok).send({
+      message:
+        "Reunión de estrategia completada y onboarding del negocio finalizado.",
+      data: {
+        updatedMeeting: strategyMeeting,
+        updatedBusiness: businessToUpdate,
+      },
+    });
+  } catch (error: unknown) {
+    console.error(
+      "Error al completar la reunión de estrategia de datos:",
+      error,
+    );
     next(error);
   }
 }
