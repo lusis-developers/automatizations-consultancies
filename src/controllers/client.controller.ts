@@ -297,57 +297,80 @@ export async function getClientMeetingStatus(
 
 export async function confirmStrategyMeeting(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { clientId } = req.params;
-    const { portfolioMeetingId } = req.body;
+    // 1. Logging para depuración: La herramienta más importante.
+    // Si este log muestra un objeto vacío {}, el problema es el middleware express.json() en tu app.
+    console.log("Cuerpo de la petición recibido:", req.body);
 
-    if (!Types.ObjectId.isValid(clientId) || !Types.ObjectId.isValid(portfolioMeetingId)) {
-      res.status(400).json({ message: "IDs de cliente o reunión no válidos." });
-      return
+    const { clientId } = req.params;
+    const { portfolioMeetingId } = req.body; // El frontend debe enviar un JSON con esta clave.
+
+    // 2. Validación explícita y con mensajes de error claros.
+    if (!portfolioMeetingId) {
+      res.status(400).json({ message: "El ID de la reunión de portafolio (portfolioMeetingId) es requerido en el cuerpo de la petición." });
+      return;
     }
+    if (!Types.ObjectId.isValid(clientId) || !Types.ObjectId.isValid(portfolioMeetingId)) {
+      res.status(400).json({ message: "El formato del ID del cliente o de la reunión no es válido." });
+      return;
+    }
+
+    // 3. Lógica de negocio (con validaciones de seguridad)
     const portfolioMeeting = await models.meetings.findById(portfolioMeetingId);
+
+    // Verificamos que la reunión exista y corresponda al cliente y al tipo correcto.
     if (!portfolioMeeting || portfolioMeeting.client!.toString() !== clientId || portfolioMeeting.meetingType !== MeetingType.PORTFOLIO_ACCESS) {
       res.status(404).json({ message: "La reunión de acceso especificada no es válida o no corresponde a este cliente." });
-      return
+      return;
+    }
+
+    // Idempotencia: Si ya está completada, no hacemos nada más.
+    if (portfolioMeeting.status === MeetingStatus.COMPLETED) {
+        res.status(200).json({ message: "Esta reunión ya fue marcada como completada previamente." });
+        return;
     }
 
     portfolioMeeting.status = MeetingStatus.COMPLETED;
-    await portfolioMeeting.save();
-    console.log(`Reunión de portafolio ${portfolioMeetingId} marcada como completada.`);
-
+    
+    // Verificamos si ya existe una reunión de estrategia para este negocio para no duplicarla
     const existingStrategyMeeting = await models.meetings.findOne({
         client: clientId,
+        business: portfolioMeeting.business, // Crucial: La nueva reunión debe ser para el MISMO negocio.
         meetingType: MeetingType.DATA_STRATEGY,
     });
 
     if (existingStrategyMeeting) {
-      console.log(`El cliente ${clientId} ya tiene una reunión de estrategia pendiente.`);
+      await portfolioMeeting.save();
+      console.log(`El cliente ${clientId} ya tiene una reunión de estrategia pendiente para el negocio ${portfolioMeeting.business}.`);
       res.status(200).json({ 
         message: "Acceso confirmado. La reunión de estrategia ya existía.",
         strategyMeeting: existingStrategyMeeting 
       });
-      return
+      return;
     }
 
+    // Creamos la nueva reunión de estrategia ASOCIADA AL MISMO NEGOCIO.
     const newStrategyMeeting = new models.meetings({
         client: clientId,
-        assignedTo: "Luis Reyes (Experto en Estrategia)",
+        business: portfolioMeeting.business, // Mantenemos el contexto del negocio
+        assignedTo: "Luis Reyes (Estratega)",
         status: MeetingStatus.PENDING_SCHEDULE,
         meetingType: MeetingType.DATA_STRATEGY,
     });
-    await newStrategyMeeting.save();
 
-    await models.clients.findByIdAndUpdate(clientId, {
-        $push: { meetings: newStrategyMeeting._id }
-    });
+    // Guardamos ambas operaciones en paralelo para mayor eficiencia.
+    await Promise.all([
+        portfolioMeeting.save(),
+        newStrategyMeeting.save(),
+        models.clients.findByIdAndUpdate(clientId, { $push: { meetings: newStrategyMeeting._id } })
+    ]);
     
-    console.log(`Nueva reunión de Estrategia (pendiente) creada para el cliente ${clientId}`);
+    console.log(`Nueva reunión de Estrategia (pendiente) creada para el cliente ${clientId} y negocio ${portfolioMeeting.business}`);
 
     res.status(200).json({ 
       message: "Acceso a portafolio confirmado y reunión de estrategia habilitada.",
       strategyMeeting: newStrategyMeeting 
     });
 
-    return
   } catch (error: unknown) {
     console.error("Error al confirmar la reunión de estrategia:", error);
     next(error);
