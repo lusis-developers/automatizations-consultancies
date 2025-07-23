@@ -233,14 +233,18 @@ export async function getClientMeetingStatus(
   next: NextFunction,
 ): Promise<void> {
   try {
-    // 1. Obtener y validar el ID del cliente (sin cambios)
     const { clientId } = req.params;
     if (!Types.ObjectId.isValid(clientId)) {
       res.status(400).json({ message: "El ID del cliente proporcionado no es válido." });
       return;
     }
 
-    // 2. Buscar al cliente y poblar sus reuniones (sin cambios)
+    const { businessId } = req.query;
+    if (businessId && !Types.ObjectId.isValid(businessId as string)) {
+      res.status(400).json({ message: "El ID del negocio proporcionado no es válido." });
+      return;
+    }
+
     const client = await models.clients.findById(clientId).populate('meetings');
 
     if (!client) {
@@ -248,31 +252,30 @@ export async function getClientMeetingStatus(
       return;
     }
 
-    // --- LÓGICA NUEVA para encontrar la última reunión creada ---
+    let relevantMeetings: IMeeting[];
 
-    // 3. Verificamos si el cliente tiene reuniones
-    if (!client.meetings || client.meetings.length === 0) {
-      // Si no hay ninguna reunión, lo informamos como antes.
+    if (businessId) {
+      relevantMeetings = (client.meetings as IMeeting[]).filter(
+        (meeting) => meeting.business?.toString() === businessId
+      );
+    } else {
+      relevantMeetings = client.meetings as IMeeting[];
+    }
+    
+    if (!relevantMeetings || relevantMeetings.length === 0) {
       res.status(200).json({
         hasScheduledMeeting: false,
-        message: "El cliente no tiene ninguna reunión en su historial.",
+        message: "El cliente no tiene reuniones para el contexto especificado.",
       });
       return;
     }
 
-    // 4. Ordenamos todas las reuniones por su fecha de creación (createdAt) de forma descendente.
-    // Usamos [...client.meetings] para crear una copia y no modificar el array original.
-    const sortedMeetings = [...client.meetings].sort((a: IMeeting, b: IMeeting) =>
+    const sortedMeetings = [...relevantMeetings].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    // 5. La "última" reunión es la primera de la lista ya ordenada.
     const latestMeeting = sortedMeetings[0];
-
-    // 6. Formular y enviar la respuesta para el frontend
-    // Adaptamos la respuesta para que siga siendo útil para tu componente.
     res.status(200).json({
-      // Indicamos que SÍ se encontró una reunión (la última) para analizar.
       hasScheduledMeeting: true, 
       meeting: {
         id: latestMeeting._id,
@@ -281,8 +284,8 @@ export async function getClientMeetingStatus(
         assignedTo: latestMeeting.assignedTo,
         scheduledTime: latestMeeting.scheduledTime,
         meetingLink: latestMeeting.meetingLink,
-        // Añadimos createdAt para que puedas verificar si lo necesitas
-        createdAt: latestMeeting.createdAt 
+        business: latestMeeting.business,
+        createdAt: latestMeeting.createdAt,
       },
     });
 
