@@ -297,12 +297,10 @@ export async function getClientMeetingStatus(
 
 export async function confirmStrategyMeeting(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // 1. Logging para depuración: La herramienta más importante.
-    // Si este log muestra un objeto vacío {}, el problema es el middleware express.json() en tu app.
     console.log("Cuerpo de la petición recibido:", req.body);
 
     const { clientId } = req.params;
-    const { portfolioMeetingId } = req.body; // El frontend debe enviar un JSON con esta clave.
+    const { portfolioMeetingId } = req.body;
 
     // 2. Validación explícita y con mensajes de error claros.
     if (!portfolioMeetingId) {
