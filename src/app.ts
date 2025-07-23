@@ -17,6 +17,7 @@ export default function createApp() {
     "https://onboarding-bakano.netlify.app",
     "https://onboarding.bakano.ec",
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://admin.bakano.ec"
   ];
 

@@ -7,6 +7,7 @@ import { IMeeting } from "../models/meeting.model";
 import { IClient } from "../models/clients.model";
 import { IBusiness } from "../models/business.model";
 import { MeetingService } from "../services/meeting.service";
+import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 
 export async function getClientAndBusiness(
   req: Request,
@@ -232,14 +233,18 @@ export async function getClientMeetingStatus(
   next: NextFunction,
 ): Promise<void> {
   try {
-    // 1. Obtener y validar el ID del cliente (sin cambios)
     const { clientId } = req.params;
     if (!Types.ObjectId.isValid(clientId)) {
       res.status(400).json({ message: "El ID del cliente proporcionado no es válido." });
       return;
     }
 
-    // 2. Buscar al cliente y poblar sus reuniones (sin cambios)
+    const { businessId } = req.query;
+    if (businessId && !Types.ObjectId.isValid(businessId as string)) {
+      res.status(400).json({ message: "El ID del negocio proporcionado no es válido." });
+      return;
+    }
+
     const client = await models.clients.findById(clientId).populate('meetings');
 
     if (!client) {
@@ -247,31 +252,30 @@ export async function getClientMeetingStatus(
       return;
     }
 
-    // --- LÓGICA NUEVA para encontrar la última reunión creada ---
+    let relevantMeetings: IMeeting[];
 
-    // 3. Verificamos si el cliente tiene reuniones
-    if (!client.meetings || client.meetings.length === 0) {
-      // Si no hay ninguna reunión, lo informamos como antes.
+    if (businessId) {
+      relevantMeetings = (client.meetings as IMeeting[]).filter(
+        (meeting) => meeting.business?.toString() === businessId
+      );
+    } else {
+      relevantMeetings = client.meetings as IMeeting[];
+    }
+    
+    if (!relevantMeetings || relevantMeetings.length === 0) {
       res.status(200).json({
         hasScheduledMeeting: false,
-        message: "El cliente no tiene ninguna reunión en su historial.",
+        message: "El cliente no tiene reuniones para el contexto especificado.",
       });
       return;
     }
 
-    // 4. Ordenamos todas las reuniones por su fecha de creación (createdAt) de forma descendente.
-    // Usamos [...client.meetings] para crear una copia y no modificar el array original.
-    const sortedMeetings = [...client.meetings].sort((a: IMeeting, b: IMeeting) =>
+    const sortedMeetings = [...relevantMeetings].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    // 5. La "última" reunión es la primera de la lista ya ordenada.
     const latestMeeting = sortedMeetings[0];
-
-    // 6. Formular y enviar la respuesta para el frontend
-    // Adaptamos la respuesta para que siga siendo útil para tu componente.
     res.status(200).json({
-      // Indicamos que SÍ se encontró una reunión (la última) para analizar.
       hasScheduledMeeting: true, 
       meeting: {
         id: latestMeeting._id,
@@ -280,8 +284,8 @@ export async function getClientMeetingStatus(
         assignedTo: latestMeeting.assignedTo,
         scheduledTime: latestMeeting.scheduledTime,
         meetingLink: latestMeeting.meetingLink,
-        // Añadimos createdAt para que puedas verificar si lo necesitas
-        createdAt: latestMeeting.createdAt 
+        business: latestMeeting.business,
+        createdAt: latestMeeting.createdAt,
       },
     });
 
@@ -441,6 +445,92 @@ export async function assignMeetingController(
 
   } catch (error: unknown) {
     console.error("Error in assignMeetingController:", error);
+    next(error);
+  }
+}
+
+/**
+ * @description Marca una reunión de estrategia de datos (con Luis Reyes) como completada y finaliza el proceso de onboarding del negocio asociado.
+ * @route POST /api/client/:clientId/complete-data-strategy-meeting
+ * @access Private (Debe ser llamado por el frontend de administración)
+ */
+export async function completeDataStrategyMeeting(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { clientId } = req.params;
+    const { strategyMeetingId } = req.body as { strategyMeetingId: string };
+
+    if (
+      !Types.ObjectId.isValid(clientId) ||
+      !Types.ObjectId.isValid(strategyMeetingId)
+    ) {
+      res
+        .status(HttpStatusCode.BadRequest)
+        .json({ message: "El ID del cliente o de la reunión no es válido." });
+      return;
+    }
+
+    const strategyMeeting = await models.meetings
+      .findById(strategyMeetingId)
+      .populate("business");
+
+    if (
+      !strategyMeeting ||
+      strategyMeeting.client?.toString() !== clientId ||
+      strategyMeeting.meetingType !== MeetingType.DATA_STRATEGY
+    ) {
+      res.status(HttpStatusCode.NotFound).send({
+        message:
+          "La reunión de estrategia de datos especificada no es válida o no corresponde a este cliente.",
+      });
+      return;
+    }
+
+    if (strategyMeeting.status === MeetingStatus.COMPLETED) {
+      res.status(HttpStatusCode.Ok).send({
+        message: "Esta reunión ya fue marcada como completada previamente.",
+        meeting: strategyMeeting,
+      });
+      return;
+    }
+
+    strategyMeeting.status = MeetingStatus.COMPLETED;
+
+    const businessToUpdate = strategyMeeting.business as IBusiness;
+    if (businessToUpdate) {
+      businessToUpdate.onboardingStep = OnboardingStepEnum.ONBOARDING_COMPLETE;
+    }
+
+    await Promise.all([
+      strategyMeeting.save(),
+      businessToUpdate ? businessToUpdate.save() : Promise.resolve(),
+    ]);
+
+    console.log(
+      `[Onboarding] Reunión de estrategia ${strategyMeetingId} completada.`,
+    );
+    if (businessToUpdate) {
+      console.log(
+        `[Onboarding] Negocio ${businessToUpdate.name} (${businessToUpdate._id}) ha completado el onboarding.`,
+      );
+    }
+
+    res.status(HttpStatusCode.Ok).send({
+      message:
+        "Reunión de estrategia completada y onboarding del negocio finalizado.",
+      data: {
+        updatedMeeting: strategyMeeting,
+        updatedBusiness: businessToUpdate,
+      },
+    });
+  } catch (error: unknown) {
+    console.error(
+      "Error al completar la reunión de estrategia de datos:",
+      error,
+    );
     next(error);
   }
 }
