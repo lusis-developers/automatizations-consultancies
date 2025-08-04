@@ -36,6 +36,7 @@ Esta guía proporciona información detallada para desarrolladores que trabajen 
 - **MongoDB**: v5.0 o superior
 - **Git**: Para control de versiones
 - **VS Code**: Editor recomendado
+- **Credenciales de Google Drive**: Solicitar archivo `bakano-mvp-generate-content-4618d04c0dde.json` a **dreyes@bakano.ec**
 
 ### Instalación Inicial
 
@@ -49,6 +50,10 @@ npm install
 
 # Copiar archivo de configuración
 cp .env.example .env
+
+# IMPORTANTE: Solicitar credenciales de Google Drive
+# Contactar a dreyes@bakano.ec para obtener:
+# - src/credentials/bakano-mvp-generate-content-4618d04c0dde.json
 
 # Configurar variables de entorno
 nano .env
@@ -73,8 +78,11 @@ RESEND_KEY=re_tu_api_key
 FROM_EMAIL=noreply@bakano.ec
 
 # Google Drive
-GOOGLE_DRIVE_CREDENTIALS_PATH=./credentials/service-account.json
+GOOGLE_DRIVE_CREDENTIALS_PATH=./src/credentials/bakano-mvp-generate-content-4618d04c0dde.json
 GOOGLE_DRIVE_FOLDER_ID=1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL
+
+# IMPORTANTE: El archivo de credenciales debe solicitarse a dreyes@bakano.ec
+# Este archivo contiene información sensible y NO debe estar en el repositorio
 
 # URLs del frontend
 FRONTEND_URL=http://localhost:5173
