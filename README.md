@@ -239,8 +239,11 @@ CLIENT_TOKEN=tu_token_de_pagoplux
 RESEND_API_KEY=tu_api_key_de_resend
 
 # Google Drive
-GOOGLE_DRIVE_CREDENTIALS_PATH=ruta/a/credenciales.json
-GOOGLE_DRIVE_FOLDER_ID=id_de_carpeta_principal
+GOOGLE_DRIVE_CREDENTIALS_PATH=./src/credentials/bakano-mvp-generate-content-4618d04c0dde.json
+GOOGLE_DRIVE_FOLDER_ID=1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL
+
+# IMPORTANTE: El archivo de credenciales de Google Drive debe solicitarse a dreyes@bakano.ec
+# Este archivo contiene información sensible y NO debe estar en el repositorio
 
 # Servidor
 PORT=3000
@@ -255,6 +258,7 @@ NODE_ENV=development
 - Credenciales de Google Drive API
 - Cuenta de PagoPlux
 - Cuenta de Resend
+- **Credenciales de Google Drive**: Solicitar archivo `bakano-mvp-generate-content-4618d04c0dde.json` a **dreyes@bakano.ec**
 
 ### Instalación
 ```bash
@@ -268,6 +272,10 @@ npm install
 # Configurar variables de entorno
 cp .env.example .env
 # Editar .env con tus credenciales
+
+# IMPORTANTE: Solicitar credenciales de Google Drive
+# Contactar a dreyes@bakano.ec para obtener:
+# - src/credentials/bakano-mvp-generate-content-4618d04c0dde.json
 
 # Compilar TypeScript
 npm run build
@@ -332,6 +340,16 @@ El sistema incluye schedulers para:
 - Manejo centralizado de errores
 - Monitoreo de performance
 - Alertas automáticas
+
+## 📚 Documentación Adicional
+
+Para información más detallada, consulta:
+
+- **Controladores**: Documentación detallada de cada controlador en `CONTROLLERS.md`
+- **Rutas**: Especificación completa de endpoints en `ROUTES.md`
+- **Servicios**: Documentación de servicios externos en `SERVICES.md`
+- **Desarrollo**: Guía completa de desarrollo en `DEVELOPMENT.md`
+- **🔐 Seguridad**: **IMPORTANTE** - Guía de credenciales y seguridad en `SECURITY.md`
 
 ## 🤝 Contribución
 
