@@ -275,11 +275,25 @@ class GoogleDriveService {
 
 ### Variables de Entorno Requeridas
 ```env
-GOOGLE_DRIVE_CREDENTIALS_PATH=./credentials/service-account.json
+GOOGLE_DRIVE_CREDENTIALS_PATH=./src/credentials/bakano-mvp-generate-content-4618d04c0dde.json
 GOOGLE_DRIVE_FOLDER_ID=1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL
 ```
 
+**⚠️ IMPORTANTE**: El archivo de credenciales `bakano-mvp-generate-content-4618d04c0dde.json` debe solicitarse a **dreyes@bakano.ec**. Este archivo contiene información sensible y NO debe estar en el repositorio por razones de seguridad.
+
 ### Autenticación
+
+El servicio utiliza una cuenta de servicio de Google Cloud Platform con las siguientes características:
+
+- **Tipo**: Service Account
+- **Proyecto**: bakano-mvp-generate-content
+- **Email**: god-service-account@bakano-mvp-generate-content.iam.gserviceaccount.com
+- **Permisos**: Acceso completo a Google Drive
+- **Formato**: JSON con claves privadas
+
+**📧 Obtener Credenciales**: Para obtener el archivo de credenciales, contactar a **dreyes@bakano.ec** y solicitar:
+- `src/credentials/bakano-mvp-generate-content-4618d04c0dde.json`
+
 ```typescript
 // Archivo de credenciales de Service Account
 {
@@ -287,7 +301,7 @@ GOOGLE_DRIVE_FOLDER_ID=1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL
   "project_id": "bakano-mvp-generate-content",
   "private_key_id": "...",
   "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "service-account@bakano-mvp.iam.gserviceaccount.com",
+  "client_email": "god-service-account@bakano-mvp-generate-content.iam.gserviceaccount.com",
   "client_id": "...",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token"
