@@ -69,7 +69,7 @@ PAGOPLUX_ENDPOINT=https://api.pagoplux.com/intv1/integrations/createLinkFacturaR
 CLIENT_TOKEN=tu_token_base64
 
 # Resend
-RESEND_API_KEY=re_tu_api_key
+RESEND_KEY=re_tu_api_key
 FROM_EMAIL=noreply@bakano.ec
 
 # Google Drive

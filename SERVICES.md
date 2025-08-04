@@ -127,7 +127,7 @@ class ResendService {
 
 ### Variables de Entorno Requeridas
 ```env
-RESEND_API_KEY=re_tu_api_key_de_resend
+RESEND_KEY=re_tu_api_key_de_resend
 FROM_EMAIL=noreply@bakano.ec
 ```
 
@@ -602,7 +602,7 @@ export function extractExtras(
 const apiKey = "sk_live_abc123...";
 
 // ✅ Usar variables de entorno
-const apiKey = process.env.RESEND_API_KEY;
+const apiKey = process.env.RESEND_KEY;
 if (!apiKey) {
   throw new Error("RESEND_API_KEY is required");
 }
