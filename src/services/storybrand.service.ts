@@ -138,4 +138,140 @@ export class StorybrandService {
       throw new CustomError('Error creating StoryBrand account', HttpStatusCode.InternalServerError);
     }
   }
+
+  /**
+   * Changes the password for a StoryBrand account associated with the specified client
+   * @param clientId Client ID
+   * @param newPassword New password to set
+   * @returns The updated account
+   */
+  public async changePassword(clientId: string, newPassword: string) {
+    if (!Types.ObjectId.isValid(clientId)) {
+      throw new CustomError(
+        "Invalid client ID format",
+        HttpStatusCode.BadRequest
+      );
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      throw new CustomError(
+        "New password is required and must be at least 6 characters long.",
+        HttpStatusCode.BadRequest
+      );
+    }
+
+    try {
+      // Find the account for this client
+      const account = await models.mvpAccounts.findOne({
+        client: clientId,
+        mvpType: this.mvpType
+      });
+
+      if (!account) {
+        throw new CustomError("StoryBrand account not found", HttpStatusCode.NotFound);
+      }
+
+      // Get the external account ID from the stored account data
+      // Based on the log, the ID is nested inside accountData.user._id
+      const externalAccountId = account.accountData?.user?._id || account.accountData?.id || account.accountData?._id;
+      if (!externalAccountId) {
+        throw new CustomError("External account reference not found", HttpStatusCode.InternalServerError);
+      }
+
+      // Call the external StoryBrand API to change the password
+      try {
+        const response = await axios.put(`${this.baseUrl}/api/storybrand-account/password`, {
+          userId: externalAccountId,
+          newPassword
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        // Update the local account data with any changes from the external service
+        if (response.data && response.data.user) {
+          account.accountData = { ...account.accountData, ...response.data.user };
+          await account.save();
+        }
+
+        return account;
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          console.error('Error connecting to StoryBrand API for password change:', error);
+          const status = error.response?.status || HttpStatusCode.InternalServerError;
+          const message = error.response?.data?.message || 'Error changing password in StoryBrand API';
+          throw new CustomError(message, status);
+        }
+        throw new CustomError('Error changing StoryBrand account password', HttpStatusCode.InternalServerError);
+      }
+    } catch (error: unknown) {
+      console.error('Error in changePassword:', error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError('Error changing StoryBrand account password', HttpStatusCode.InternalServerError);
+    }
+  }
+
+  /**
+   * Deletes a StoryBrand account associated with the specified client
+   * @param clientId Client ID
+   * @returns Success message
+   */
+  public async deleteAccount(clientId: string) {
+    if (!Types.ObjectId.isValid(clientId)) {
+      throw new CustomError(
+        "Invalid client ID format",
+        HttpStatusCode.BadRequest
+      );
+    }
+
+    try {
+      // Find the account for this client
+      const account = await models.mvpAccounts.findOne({
+        client: clientId,
+        mvpType: this.mvpType
+      });
+
+      if (!account) {
+        throw new CustomError("StoryBrand account not found", HttpStatusCode.NotFound);
+      }
+
+      // Get the external account ID from the stored account data
+      // Based on the log, the ID is nested inside accountData.user._id
+      const externalAccountId = account.accountData?.user?._id || account.accountData?.id || account.accountData?._id;
+      if (!externalAccountId) {
+        throw new CustomError("External account reference not found", HttpStatusCode.InternalServerError);
+      }
+
+      // Call the external StoryBrand API to delete the account
+      try {
+        await axios.delete(`${this.baseUrl}/api/storybrand-account/${externalAccountId}`, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        // Delete the local account record
+        await models.mvpAccounts.findByIdAndDelete(account._id);
+
+        return { message: "StoryBrand account deleted successfully" };
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          console.error('Error connecting to StoryBrand API for account deletion:', error);
+          const status = error.response?.status || HttpStatusCode.InternalServerError;
+          const message = error.response?.data?.message || 'Error deleting account in StoryBrand API';
+          throw new CustomError(message, status);
+        }
+        throw new CustomError('Error deleting StoryBrand account', HttpStatusCode.InternalServerError);
+      }
+    } catch (error: unknown) {
+      console.error('Error in deleteAccount:', error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError('Error deleting StoryBrand account', HttpStatusCode.InternalServerError);
+    }
+  }
 }
