@@ -164,3 +164,50 @@ export async function adminDeleteUserAccountController(req: Request, res: Respon
     next(error);
   }
 }
+
+/**
+ * @description Gets all MVP accounts associated with a specific client
+ * @route GET /api/storybrand-account/client/:clientId
+ */
+export async function getClientMvpAccountsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { clientId } = req.params;
+
+    // 1. Basic input validation
+    if (!clientId) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: 'Client ID is required' 
+      });
+      return;
+    }
+
+    // Validate clientId format
+    if (!Types.ObjectId.isValid(clientId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: 'Invalid client ID format' 
+      });
+      return;
+    }
+
+    // 2. Get accounts using the service
+    const accounts = await storybrandService.getAccountsByClientId(clientId);
+
+    res.status(HttpStatusCode.Ok).send({
+      message: 'MVP accounts retrieved successfully',
+      accounts
+    });
+    return;
+
+  } catch (error: unknown) {
+    if (error instanceof CustomError) {
+      res.status(error.status).send({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+    
+    console.error('Error retrieving MVP accounts:', error);
+    next(error);
+  }
+}
