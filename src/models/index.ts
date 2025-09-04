@@ -2,7 +2,8 @@ import clients from "./clients.model";
 import paymentsIntents from "./paymentsIntents.model";
 import transactions from "./transactions.model";
 import business from "./business.model";
-import meetings from './meeting.model'
+import meetings from './meeting.model';
+import mvpAccounts from './mvpAccount.model';
 
 const models = {
   clients,
@@ -10,6 +11,7 @@ const models = {
   transactions,
   business,
   meetings,
+  mvpAccounts,
 };
 
 export default models;
