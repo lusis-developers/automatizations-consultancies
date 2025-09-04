@@ -274,4 +274,54 @@ export class StorybrandService {
       throw new CustomError('Error deleting StoryBrand account', HttpStatusCode.InternalServerError);
     }
   }
+
+  /**
+   * Gets all MVP accounts associated with a specific client
+   * @param clientId Client ID
+   * @returns Array of MVP accounts
+   */
+  public async getAccountsByClientId(clientId: string) {
+    if (!Types.ObjectId.isValid(clientId)) {
+      throw new CustomError(
+        "Invalid client ID format",
+        HttpStatusCode.BadRequest
+      );
+    }
+
+    try {
+      // Find all MVP accounts for this client (not just StoryBrand)
+      const accounts = await models.mvpAccounts.find({
+        client: clientId
+      }).lean();
+
+      // If no accounts found, return empty array instead of throwing error
+      if (!accounts || accounts.length === 0) {
+        return [];
+      }
+
+      // Return the accounts with sensitive data removed
+      return accounts.map(account => ({
+        _id: account._id,
+        client: account.client,
+        mvpType: account.mvpType,
+        active: account.active,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt,
+        // Include basic account info but remove sensitive data
+        accountInfo: account.accountData?.user ? {
+          email: account.accountData.user.email,
+          firstName: account.accountData.user.firstName,
+          lastName: account.accountData.user.lastName,
+          role: account.accountData.user.role,
+          createdAt: account.accountData.user.createdAt
+        } : null
+      }));
+    } catch (error: unknown) {
+      console.error('Error in getAccountsByClientId:', error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError('Error retrieving MVP accounts', HttpStatusCode.InternalServerError);
+    }
+  }
 }
