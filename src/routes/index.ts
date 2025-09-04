@@ -4,7 +4,8 @@ import payments from "./payments.routes";
 import businesses from "./business.routes";
 import clients from "./client.route";
 import search from "./search.routes";
-import meetings from "./meeting.route"
+import meetings from "./meeting.route";
+import storybrandAccount from "./storybrand-account.route"
 
 function routerApi(app: Application) {
   const router = express.Router();
@@ -16,6 +17,7 @@ function routerApi(app: Application) {
   router.use(clients);
   router.use(search);
   router.use(meetings);
+  router.use("/storybrand-account", storybrandAccount);
 }
 
 export default routerApi;
