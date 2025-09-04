@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { HttpStatusCode } from 'axios';
 import { StorybrandService } from '../services/storybrand.service';
 import CustomError from '../errors/customError.error';
+import { Types } from 'mongoose';
 
 const storybrandService = new StorybrandService();
 
@@ -68,6 +69,98 @@ export async function createStorybrandAccountController(req: Request, res: Respo
     }
     
     console.error('Error creating StoryBrand account:', error);
+    next(error);
+  }
+}
+
+/**
+ * @description Admin endpoint to change a StoryBrand account's password
+ * @route PUT /api/storybrand-account/password
+ */
+export async function adminChangePasswordController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { clientId, newPassword } = req.body;
+
+    // 1. Basic input validation
+    if (!clientId || !newPassword || newPassword.length < 6) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: 'Client ID and new password are required. New password must be at least 6 characters long' 
+      });
+      return;
+    }
+
+    // Validate clientId format
+    if (!Types.ObjectId.isValid(clientId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: 'Invalid client ID format' 
+      });
+      return;
+    }
+
+    // 2. Change password using the service
+    await storybrandService.changePassword(clientId, newPassword);
+
+    res.status(HttpStatusCode.Ok).send({
+      message: 'Password changed successfully'
+    });
+    return;
+
+  } catch (error: unknown) {
+    if (error instanceof CustomError) {
+      res.status(error.status).send({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+    
+    console.error('Error changing StoryBrand account password:', error);
+    next(error);
+  }
+}
+
+/**
+ * @description Admin endpoint to delete a StoryBrand account
+ * @route DELETE /api/storybrand-account/:userId
+ */
+export async function adminDeleteUserAccountController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { userId } = req.params;
+
+    // 1. Basic input validation
+    if (!userId) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: 'Client ID is required' 
+      });
+      return;
+    }
+
+    // Validate userId format
+    if (!Types.ObjectId.isValid(userId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: 'Invalid client ID format' 
+      });
+      return;
+    }
+
+    // 2. Delete account using the service
+    await storybrandService.deleteAccount(userId);
+
+    res.status(HttpStatusCode.Ok).send({
+      message: 'StoryBrand account and all associated data deleted successfully'
+    });
+    return;
+
+  } catch (error: unknown) {
+    if (error instanceof CustomError) {
+      res.status(error.status).send({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+    
+    console.error('Error deleting StoryBrand account:', error);
     next(error);
   }
 }
