@@ -15,13 +15,13 @@ RUN npm install -g pnpm
 # Usamos package*.json para incluir pnpm-lock.yaml y mejorar el cacheo de capas.
 COPY package*.json ./
 
-# Aumentar la memoria disponible para Node.js durante la compilación.
-# Puede que ya no sea necesario sin `sharp`, pero se mantiene por seguridad.
-# Si tu build funciona sin esto, puedes eliminar la siguiente línea.
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+# Optimizar memoria para VPS con recursos limitados
+ENV NODE_OPTIONS="--max-old-space-size=1024 --max-semi-space-size=64"
 
-# Instalar todas las dependencias (incluidas las de desarrollo)
-RUN pnpm install
+# Instalar todas las dependencias con configuración optimizada para VPS
+RUN pnpm config set store-dir /tmp/.pnpm-store && \
+    pnpm install --frozen-lockfile --prefer-offline && \
+    rm -rf /tmp/.pnpm-store
 
 # Copiar el resto del código fuente de la aplicación
 COPY . .
@@ -31,8 +31,8 @@ COPY . .
 # Asumiendo que el build no las empaqueta, las copiamos directamente.
 COPY src/credentials ./dist/credentials
 
-# Compilar la aplicación
-RUN pnpm run build
+# Compilar la aplicación con configuración optimizada para VPS
+RUN NODE_OPTIONS="--max-old-space-size=1024" pnpm run build
 
 
 # ======================================================================================
