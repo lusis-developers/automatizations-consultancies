@@ -8,7 +8,7 @@ import ResendEmail from "../services/resend.service";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 import { HttpStatusCode } from "axios";
 import { IClient } from "../models/clients.model";
-import { IManager } from "../models/business.model";
+import { IManager, IHandoffData } from "../models/business.model";
 import { BusinessTypeEnum } from "../enums/businessType.enum";
 
 export async function receiveConsultancyData(
@@ -303,6 +303,91 @@ export async function deleteBusinessAndNotifyController(
 
   } catch (error: unknown) {
     console.error("[Business - Delete Error]", error);
+    next(error);
+  }
+}
+
+/**
+ * Adds handoff data to a business when it converts to a client (Phase 0)
+ * This endpoint is used by administrators to track conversion details
+ * @param req The Express request object. Expects businessId in params and handoff data in body
+ * @param res The Express response object
+ * @param next The Express next function for error handling
+ */
+export async function addHandoffData(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { businessId } = req.params;
+    const {
+      salesSummary,
+      clientExpectations,
+      billingSegment,
+      clientExpectedOutcome,
+      handoffBy,
+      notes
+    }: {
+      salesSummary: string;
+      clientExpectations: string;
+      billingSegment: string;
+      clientExpectedOutcome: string;
+      handoffBy: string;
+      notes?: string;
+    } = req.body;
+
+    if (!Types.ObjectId.isValid(businessId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: "Invalid business ID provided." 
+      });
+      return;
+    }
+
+    if (!salesSummary || !clientExpectations || !billingSegment || !clientExpectedOutcome || !handoffBy) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: "All required handoff fields must be provided: salesSummary, clientExpectations, billingSegment, clientExpectedOutcome, handoffBy." 
+      });
+      return;
+    }
+
+    const business = await models.business.findById(businessId);
+
+    if (!business) {
+      res.status(HttpStatusCode.NotFound).send({ 
+        message: "Business not found with the provided ID." 
+      });
+      return;
+    }
+
+    if (business.handoffData) {
+      res.status(HttpStatusCode.Conflict).send({ 
+        message: "Handoff data already exists for this business. Use update endpoint to modify." 
+      });
+      return;
+    }
+
+    const handoffData: Partial<IHandoffData> = {
+      salesSummary: salesSummary.trim(),
+      clientExpectations: clientExpectations.trim(),
+      billingSegment: billingSegment.trim(),
+      clientExpectedOutcome: clientExpectedOutcome.trim(),
+      handoffBy: handoffBy.trim(),
+      handoffDate: new Date(),
+      notes: notes?.trim() || undefined
+    };
+
+    business.handoffData = handoffData as IHandoffData;
+    await business.save();
+
+    res.status(HttpStatusCode.Created).send({
+      message: "Handoff data added successfully.",
+      businessId: business._id,
+      handoffData: business.handoffData
+    });
+
+  } catch (error: unknown) {
+    console.error("[Business - Add Handoff Data Error]", error);
     next(error);
   }
 }
