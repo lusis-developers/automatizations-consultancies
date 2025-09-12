@@ -4,6 +4,7 @@ import transactions from "./transactions.model";
 import business from "./business.model";
 import meetings from './meeting.model';
 import mvpAccounts from './mvpAccount.model';
+import { Checklist } from './checklist.model';
 
 const models = {
   clients,
@@ -12,6 +13,7 @@ const models = {
   business,
   meetings,
   mvpAccounts,
+  checklists: Checklist,
 };
 
 export default models;
