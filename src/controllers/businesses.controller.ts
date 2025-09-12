@@ -8,7 +8,7 @@ import ResendEmail from "../services/resend.service";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 import { HttpStatusCode } from "axios";
 import { IClient } from "../models/clients.model";
-import { IManager } from "../models/business.model";
+import { IManager, IHandoffData } from "../models/business.model";
 import { BusinessTypeEnum } from "../enums/businessType.enum";
 
 export async function receiveConsultancyData(
@@ -21,8 +21,14 @@ export async function receiveConsultancyData(
     const { businessId } = req.params;
 
     if (!Types.ObjectId.isValid(businessId)) {
-        res.status(HttpStatusCode.BadRequest).send({ message: "El ID del negocio no es válido." });
+        res.status(HttpStatusCode.BadRequest).send({ message: "Invalid business ID format." });
         return;
+    }
+
+    // Ensure uploads directory exists
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
     const driveService = new GoogleDriveService(
@@ -39,10 +45,12 @@ export async function receiveConsultancyData(
     if (!business) {
       if (Array.isArray(allFiles)) {
         for (const file of allFiles) {
-          fs.unlinkSync(file.path);
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
         }
       }
-      res.status(HttpStatusCode.BadRequest).send({ message: "Negocio no encontrado con ese ID" });
+      res.status(HttpStatusCode.NotFound).send({ message: "Business not found with that ID." });
       return;
     }
     
@@ -56,6 +64,17 @@ export async function receiveConsultancyData(
     const updatePayload: any = { ...req.body };
     const newMenuUrls: string[] = [];
     
+    // Handle brand identity text fields
+    if (req.body.brandPrimaryColor) {
+      updatePayload.brandPrimaryColor = req.body.brandPrimaryColor;
+    }
+    if (req.body.brandSecondaryColor) {
+      updatePayload.brandSecondaryColor = req.body.brandSecondaryColor;
+    }
+    if (req.body.brandTypographyName) {
+      updatePayload.brandTypographyName = req.body.brandTypographyName;
+    }
+    
     if (Array.isArray(allFiles)) {
       for (const file of allFiles) {
         const driveUrl = await driveService.uploadFileToSubfolder(
@@ -66,11 +85,20 @@ export async function receiveConsultancyData(
 
         if (file.fieldname === 'menuRestaurante') {
           newMenuUrls.push(driveUrl);
+        } else if (file.fieldname === 'brandLogo') {
+          updatePayload.brandLogoPath = driveUrl;
+        } else if (file.fieldname === 'brandTypography') {
+          updatePayload.brandTypographyPath = driveUrl;
+        } else if (file.fieldname === 'brandUsageExamples') {
+          updatePayload.brandUsageExamplesPath = driveUrl;
         } else {
           updatePayload[`${file.fieldname}Path`] = driveUrl;
         }
 
-        fs.unlinkSync(file.path);
+        // Clean up temporary file
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
       }
     }
 
@@ -107,13 +135,13 @@ export async function receiveConsultancyData(
     }
 
     res.status(HttpStatusCode.Ok).send({
-      message: "Datos de consultoría actualizados correctamente",
+      message: "Consultancy data updated successfully.",
       businessId: business._id,
       updatedData: updatePayload,
     });
 
   } catch (error: any) {
-    console.error("Error al recibir datos de consultoría:", error);
+    console.error("Error receiving consultancy data:", error);
     if (Array.isArray(allFiles)) {
       for (const file of allFiles) {
         if (fs.existsSync(file.path)) {
@@ -178,7 +206,7 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
 
     const businessesToRemind = await models.business.find({
       $and: [
-        { onboardingStep: OnboardingStepEnum.PENDING_DATA_SUBMISSION },
+        { onboardingStep: OnboardingStepEnum.ON_BOARDING },
         {
           $or: [
             { costoPorPlatoPath: { $in: [null, undefined, ""] } },
@@ -303,6 +331,91 @@ export async function deleteBusinessAndNotifyController(
 
   } catch (error: unknown) {
     console.error("[Business - Delete Error]", error);
+    next(error);
+  }
+}
+
+/**
+ * Adds handoff data to a business when it converts to a client (Phase 0)
+ * This endpoint is used by administrators to track conversion details
+ * @param req The Express request object. Expects businessId in params and handoff data in body
+ * @param res The Express response object
+ * @param next The Express next function for error handling
+ */
+export async function addHandoffData(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { businessId } = req.params;
+    const {
+      salesSummary,
+      clientExpectations,
+      billingSegment,
+      clientExpectedOutcome,
+      handoffBy,
+      notes
+    }: {
+      salesSummary: string;
+      clientExpectations: string;
+      billingSegment: string;
+      clientExpectedOutcome: string;
+      handoffBy: string;
+      notes?: string;
+    } = req.body;
+
+    if (!Types.ObjectId.isValid(businessId)) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: "Invalid business ID provided." 
+      });
+      return;
+    }
+
+    if (!salesSummary || !clientExpectations || !billingSegment || !clientExpectedOutcome || !handoffBy) {
+      res.status(HttpStatusCode.BadRequest).send({ 
+        message: "All required handoff fields must be provided: salesSummary, clientExpectations, billingSegment, clientExpectedOutcome, handoffBy." 
+      });
+      return;
+    }
+
+    const business = await models.business.findById(businessId);
+
+    if (!business) {
+      res.status(HttpStatusCode.NotFound).send({ 
+        message: "Business not found with the provided ID." 
+      });
+      return;
+    }
+
+    if (business.handoffData) {
+      res.status(HttpStatusCode.Conflict).send({ 
+        message: "Handoff data already exists for this business. Use update endpoint to modify." 
+      });
+      return;
+    }
+
+    const handoffData: Partial<IHandoffData> = {
+      salesSummary: salesSummary.trim(),
+      clientExpectations: clientExpectations.trim(),
+      billingSegment: billingSegment.trim(),
+      clientExpectedOutcome: clientExpectedOutcome.trim(),
+      handoffBy: handoffBy.trim(),
+      handoffDate: new Date(),
+      notes: notes?.trim() || undefined
+    };
+
+    business.handoffData = handoffData as IHandoffData;
+    await business.save();
+
+    res.status(HttpStatusCode.Created).send({
+      message: "Handoff data added successfully.",
+      businessId: business._id,
+      handoffData: business.handoffData
+    });
+
+  } catch (error: unknown) {
+    console.error("[Business - Add Handoff Data Error]", error);
     next(error);
   }
 }
