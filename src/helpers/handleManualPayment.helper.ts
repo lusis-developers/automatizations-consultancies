@@ -87,11 +87,25 @@ export async function handleManualPayment(
 
     if (!business) {
       try {
+        // Use clientId as RUC if provided, otherwise leave undefined to avoid null conflicts
+        const rucValue = body.clientId && body.clientId.trim() !== '' ? body.clientId.trim() : undefined;
+        
+        // Check if RUC already exists when provided
+        if (rucValue) {
+          const existingBusinessWithRuc = await models.business.findOne({ ruc: rucValue });
+          if (existingBusinessWithRuc) {
+            res.status(409).json({ 
+              message: `The RUC '${rucValue}' is already registered by another business in the system.` 
+            });
+            return;
+          }
+        }
+        
         business = await models.business.create({
           name: body.businessName,
           businessType: body.businessType,
           owner: cliente._id,
-          ruc: null,
+          ruc: rucValue,
           email: body.email,
           phone: body.phone,
           address: "Sin dirección",

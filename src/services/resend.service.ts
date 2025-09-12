@@ -35,8 +35,8 @@ class ResendEmail {
     businessId: string,
   ): Promise<void> {
     try {
-      const link = `https://${process.env.FRONTEND_URL}/${userId}/${businessId}`;
-      console.log("link: ", link); // Agrega este log para verificar el valor del enlace
+      const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'localhost:3000';
+      const link = `https://${baseUrl}/${userId}/${businessId}`;
       const content = await generateOnBoardingEmail(name, link);
 
       const { data, error } = await this.resend.emails.send({
@@ -97,7 +97,8 @@ class ResendEmail {
     businessId: string
   ): Promise<void> {
     try {
-      const link = `https://onboarding.bakano.ec/${userId}/${businessId}`;
+      const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'localhost:3000';
+      const link = `https://${baseUrl}/${userId}/${businessId}`;
       
       const content = await generateUploadReminderEmail(businessName, link);
 
@@ -126,7 +127,8 @@ class ResendEmail {
     businessId: string
   ): Promise<void> {
     try {
-      const link = `https://${process.env.FRONTEND_URL}/${userId}/${businessId}`;
+      const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'localhost:3000';
+      const link = `https://${baseUrl}/${userId}/${businessId}`;
       const content = generateManagerOnboardingEmail(managerName, ownerName, businessName, link);
 
       const { data, error } = await this.resend.emails.send({

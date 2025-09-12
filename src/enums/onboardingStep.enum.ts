@@ -1,6 +1,7 @@
 export enum OnboardingStepEnum {
-  PENDING_DATA_SUBMISSION = "pending_data_submission",
-  PENDING_MEETING_SCHEDULE = "pending_meeting_schedule",
-  MEETING_SCHEDULED = "meeting_scheduled",
-  ONBOARDING_COMPLETE = "onboarding_complete",
+  ON_BOARDING = "on_boarding",
+  TESIS_DE_COMUNICACION = "tesis_de_comunicacion",
+  ANALISIS_DE_DATOS = "analisis_de_datos",
+  ADS = "ads",
+  PROCESO_DE_VENTAS = "proceso_de_ventas",
 }
