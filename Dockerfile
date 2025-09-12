@@ -20,7 +20,7 @@ ENV NODE_OPTIONS="--max-old-space-size=1024 --max-semi-space-size=64"
 
 # Instalar todas las dependencias con configuración optimizada para VPS
 RUN pnpm config set store-dir /tmp/.pnpm-store && \
-    pnpm install --frozen-lockfile --prefer-offline && \
+    pnpm install --prefer-offline && \
     rm -rf /tmp/.pnpm-store
 
 # Copiar el resto del código fuente de la aplicación
