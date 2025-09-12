@@ -21,8 +21,14 @@ export async function receiveConsultancyData(
     const { businessId } = req.params;
 
     if (!Types.ObjectId.isValid(businessId)) {
-        res.status(HttpStatusCode.BadRequest).send({ message: "El ID del negocio no es válido." });
+        res.status(HttpStatusCode.BadRequest).send({ message: "Invalid business ID format." });
         return;
+    }
+
+    // Ensure uploads directory exists
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
     const driveService = new GoogleDriveService(
@@ -39,10 +45,12 @@ export async function receiveConsultancyData(
     if (!business) {
       if (Array.isArray(allFiles)) {
         for (const file of allFiles) {
-          fs.unlinkSync(file.path);
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
         }
       }
-      res.status(HttpStatusCode.BadRequest).send({ message: "Negocio no encontrado con ese ID" });
+      res.status(HttpStatusCode.NotFound).send({ message: "Business not found with that ID." });
       return;
     }
     
@@ -87,7 +95,10 @@ export async function receiveConsultancyData(
           updatePayload[`${file.fieldname}Path`] = driveUrl;
         }
 
-        fs.unlinkSync(file.path);
+        // Clean up temporary file
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
       }
     }
 
@@ -124,13 +135,13 @@ export async function receiveConsultancyData(
     }
 
     res.status(HttpStatusCode.Ok).send({
-      message: "Datos de consultoría actualizados correctamente",
+      message: "Consultancy data updated successfully.",
       businessId: business._id,
       updatedData: updatePayload,
     });
 
   } catch (error: any) {
-    console.error("Error al recibir datos de consultoría:", error);
+    console.error("Error receiving consultancy data:", error);
     if (Array.isArray(allFiles)) {
       for (const file of allFiles) {
         if (fs.existsSync(file.path)) {
@@ -195,7 +206,7 @@ export async function sendDataUploadReminders(_req: Request, res: Response, next
 
     const businessesToRemind = await models.business.find({
       $and: [
-        { onboardingStep: OnboardingStepEnum.PENDING_DATA_SUBMISSION },
+        { onboardingStep: OnboardingStepEnum.ON_BOARDING },
         {
           $or: [
             { costoPorPlatoPath: { $in: [null, undefined, ""] } },
