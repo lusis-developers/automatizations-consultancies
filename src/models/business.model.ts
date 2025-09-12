@@ -113,6 +113,13 @@ export interface IBusiness extends Document {
   meetingReminder24hSent?: boolean;
 	meetingReminder1hSent?: boolean;
 	handoffData?: IHandoffData;
+	// Brand Identity Fields
+	brandLogoPath?: string;
+	brandPrimaryColor?: string;
+	brandSecondaryColor?: string;
+	brandTypographyName?: string;
+	brandTypographyPath?: string;
+	brandUsageExamplesPath?: string;
 }
 
 const BusinessSchema = new Schema<IBusiness>(
@@ -266,6 +273,37 @@ const BusinessSchema = new Schema<IBusiness>(
 		handoffData: {
 			type: handoffDataSchema,
 			required: false,
+		},
+		// Brand Identity Fields
+		brandLogoPath: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		brandPrimaryColor: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		brandSecondaryColor: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		brandTypographyName: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		brandTypographyPath: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		brandUsageExamplesPath: {
+			type: String,
+			required: false,
+			trim: true,
 		},
 	},
 	{
