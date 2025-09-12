@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { Types } from "mongoose";
 import { HttpStatusCode } from "axios";
 import models from "../models";
+import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 
 // Get checklist for a business
 export async function getBusinessChecklist(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -250,7 +251,25 @@ export async function updateChecklistItem(req: Request, res: Response, next: Nex
 			// Update current phase if this phase is completed
 			const currentPhaseIndex = checklist.phases.findIndex(p => p.id === phaseId);
 			if (currentPhaseIndex === checklist.currentPhase) {
-				checklist.currentPhase = Math.min(currentPhaseIndex + 1, checklist.phases.length - 1);
+				const nextPhaseIndex = Math.min(currentPhaseIndex + 1, checklist.phases.length - 1);
+				checklist.currentPhase = nextPhaseIndex;
+				
+				// Update business onboardingStep based on the new current phase
+				const business = await models.business.findById(businessId);
+				if (business && nextPhaseIndex > currentPhaseIndex) {
+					const onboardingSteps = [
+						OnboardingStepEnum.ON_BOARDING,
+						OnboardingStepEnum.TESIS_DE_COMUNICACION,
+						OnboardingStepEnum.ANALISIS_DE_DATOS,
+						OnboardingStepEnum.ADS,
+						OnboardingStepEnum.PROCESO_DE_VENTAS
+					];
+					
+					if (nextPhaseIndex < onboardingSteps.length) {
+						business.onboardingStep = onboardingSteps[nextPhaseIndex];
+						await business.save();
+					}
+				}
 			}
 		} else if (!allItemsCompleted && phase.completed) {
 			phase.completed = false;
