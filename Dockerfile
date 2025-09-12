@@ -16,7 +16,7 @@ RUN npm install -g pnpm
 COPY package*.json ./
 
 # Optimizar memoria para VPS con recursos limitados
-ENV NODE_OPTIONS="--max-old-space-size=1024 --max-semi-space-size=64"
+ENV NODE_OPTIONS="--max-old-space-size=2048 --max-semi-space-size=128 --optimize-for-size"
 
 # Instalar todas las dependencias con configuración optimizada para VPS
 RUN pnpm config set store-dir /tmp/.pnpm-store && \
@@ -31,8 +31,17 @@ COPY . .
 # Asumiendo que el build no las empaqueta, las copiamos directamente.
 COPY src/credentials ./dist/credentials
 
+# Crear swap temporal para ayudar con la compilación
+RUN dd if=/dev/zero of=/tmp/swapfile bs=1M count=512 && \
+    chmod 600 /tmp/swapfile && \
+    mkswap /tmp/swapfile && \
+    swapon /tmp/swapfile
+
 # Compilar la aplicación con configuración optimizada para VPS
-RUN NODE_OPTIONS="--max-old-space-size=1024" pnpm run build
+RUN NODE_OPTIONS="--max-old-space-size=2048 --max-semi-space-size=128 --optimize-for-size --gc-interval=100" pnpm run build
+
+# Limpiar swap temporal
+RUN swapoff /tmp/swapfile && rm -f /tmp/swapfile
 
 
 # ======================================================================================

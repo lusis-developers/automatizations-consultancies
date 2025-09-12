@@ -112,6 +112,7 @@
     
     /* Performance Optimizations for VPS */
     "incremental": true,                              /* Save .tsbuildinfo files to allow for incremental compilation of projects. */
-    "tsBuildInfoFile": "./.tsbuildinfo"              /* Specify the path to .tsbuildinfo incremental compilation file. */
+    "tsBuildInfoFile": "./.tsbuildinfo",              /* Specify the path to .tsbuildinfo incremental compilation file. */
+    "assumeChangesOnlyAffectDirectDependencies": true  /* Assume changes only affect direct dependencies for faster incremental builds. */
   }
 }
