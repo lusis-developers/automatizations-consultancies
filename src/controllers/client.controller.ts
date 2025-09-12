@@ -522,7 +522,7 @@ export async function completeDataStrategyMeeting(
 
     const businessToUpdate = strategyMeeting.business as IBusiness;
     if (businessToUpdate) {
-      businessToUpdate.onboardingStep = OnboardingStepEnum.ONBOARDING_COMPLETE;
+      businessToUpdate.onboardingStep = OnboardingStepEnum.PROCESO_DE_VENTAS;
     }
 
     await Promise.all([
