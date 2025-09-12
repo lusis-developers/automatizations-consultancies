@@ -2,6 +2,55 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
 import { BusinessTypeEnum } from "../enums/businessType.enum";
 
+export interface IHandoffData extends Document {
+	_id: Types.ObjectId;
+	salesSummary: string;
+	clientExpectations: string;
+	billingSegment: string;
+	clientExpectedOutcome: string;
+	handoffBy: string; // Luis Reyes or admin name
+	handoffDate: Date;
+	notes?: string;
+}
+
+const handoffDataSchema = new Schema<IHandoffData>({
+	salesSummary: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	clientExpectations: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	billingSegment: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	clientExpectedOutcome: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	handoffBy: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	handoffDate: {
+		type: Date,
+		required: true,
+		default: Date.now,
+	},
+	notes: {
+		type: String,
+		required: false,
+		trim: true,
+	},
+})
+
 
 export interface IManager extends Document {
 	_id: Types.ObjectId,
@@ -62,7 +111,8 @@ export interface IBusiness extends Document {
   lastDataReminderSentAt?: Date;
   lastScheduleMeetingReminderSentAt?: Date;
   meetingReminder24hSent?: boolean;
-  meetingReminder1hSent?: boolean;
+	meetingReminder1hSent?: boolean;
+	handoffData?: IHandoffData;
 }
 
 const BusinessSchema = new Schema<IBusiness>(
@@ -212,6 +262,10 @@ const BusinessSchema = new Schema<IBusiness>(
 			type: String,
 			enum: Object.values(BusinessTypeEnum),
 			required: true
+		},
+		handoffData: {
+			type: handoffDataSchema,
+			required: false,
 		},
 	},
 	{
