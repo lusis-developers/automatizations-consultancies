@@ -16,33 +16,17 @@ RUN npm install -g pnpm
 COPY package*.json ./
 
 # Optimizar memoria para VPS con recursos limitados
-ENV NODE_OPTIONS="--max-old-space-size=2048 --max-semi-space-size=128"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Instalar todas las dependencias con configuración optimizada para VPS
-RUN pnpm config set store-dir /tmp/.pnpm-store && \
-    pnpm install --prefer-offline && \
-    rm -rf /tmp/.pnpm-store
+# El store-dir temporal se limpia solo, no es necesario eliminarlo manualmente.
+RUN pnpm install
 
 # Copiar el resto del código fuente de la aplicación
 COPY . .
 
-# Copiar las credenciales a su futura ruta en /dist
-# Se hace antes del build si el build las necesita, o se puede mover para después.
-# Asumiendo que el build no las empaqueta, las copiamos directamente.
-COPY src/credentials ./dist/credentials
-
-# Crear swap temporal para ayudar con la compilación
-RUN dd if=/dev/zero of=/tmp/swapfile bs=1M count=512 && \
-    chmod 600 /tmp/swapfile && \
-    mkswap /tmp/swapfile && \
-    swapon /tmp/swapfile
-
 # Compilar la aplicación con configuración optimizada para VPS
-RUN NODE_OPTIONS="--max-old-space-size=2048 --max-semi-space-size=128 --gc-interval=100" pnpm run build
-
-# Limpiar swap temporal
-RUN swapoff /tmp/swapfile && rm -f /tmp/swapfile
-
+RUN pnpm run build
 
 # ======================================================================================
 # ETAPA 2: PRODUCTION - Crea la imagen final
@@ -63,9 +47,13 @@ COPY package*.json ./
 # Instalar ÚNICAMENTE las dependencias de producción
 RUN pnpm install --prod
 
-# Copiar los archivos compilados y las credenciales desde la etapa 'builder'
+# Copiar los archivos compilados desde la etapa 'builder'
 COPY --from=builder /usr/src/app/dist ./dist
 
+# Copiar las credenciales directamente en la imagen final
+COPY src/credentials ./dist/credentials
+
+# Crear la carpeta de uploads que necesita la aplicación
 RUN mkdir uploads
 
 # Exponer el puerto en el que la aplicación se ejecutará
