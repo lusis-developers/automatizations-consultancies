@@ -120,6 +120,9 @@ export interface IBusiness extends Document {
 	brandTypographyName?: string;
 	brandTypographyPath?: string;
 	brandUsageExamplesPath?: string;
+
+	// Checklist Reference
+	checklistId?: Types.ObjectId;
 }
 
 const BusinessSchema = new Schema<IBusiness>(
@@ -228,7 +231,7 @@ const BusinessSchema = new Schema<IBusiness>(
 		onboardingStep: {
       type: String,
 			enum: Object.values(OnboardingStepEnum),
-      default: OnboardingStepEnum.PENDING_DATA_SUBMISSION,
+      default: OnboardingStepEnum.ON_BOARDING,
 			required: true,
     },
     dataSubmissionCompletedAt: { 
@@ -304,6 +307,13 @@ const BusinessSchema = new Schema<IBusiness>(
 			type: String,
 			required: false,
 			trim: true,
+		},
+
+		// Checklist Reference
+		checklistId: {
+			type: Schema.Types.ObjectId,
+			ref: "Checklist",
+			required: false,
 		},
 	},
 	{
