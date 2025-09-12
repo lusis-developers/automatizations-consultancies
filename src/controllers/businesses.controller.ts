@@ -56,6 +56,17 @@ export async function receiveConsultancyData(
     const updatePayload: any = { ...req.body };
     const newMenuUrls: string[] = [];
     
+    // Handle brand identity text fields
+    if (req.body.brandPrimaryColor) {
+      updatePayload.brandPrimaryColor = req.body.brandPrimaryColor;
+    }
+    if (req.body.brandSecondaryColor) {
+      updatePayload.brandSecondaryColor = req.body.brandSecondaryColor;
+    }
+    if (req.body.brandTypographyName) {
+      updatePayload.brandTypographyName = req.body.brandTypographyName;
+    }
+    
     if (Array.isArray(allFiles)) {
       for (const file of allFiles) {
         const driveUrl = await driveService.uploadFileToSubfolder(
@@ -66,6 +77,12 @@ export async function receiveConsultancyData(
 
         if (file.fieldname === 'menuRestaurante') {
           newMenuUrls.push(driveUrl);
+        } else if (file.fieldname === 'brandLogo') {
+          updatePayload.brandLogoPath = driveUrl;
+        } else if (file.fieldname === 'brandTypography') {
+          updatePayload.brandTypographyPath = driveUrl;
+        } else if (file.fieldname === 'brandUsageExamples') {
+          updatePayload.brandUsageExamplesPath = driveUrl;
         } else {
           updatePayload[`${file.fieldname}Path`] = driveUrl;
         }
