@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { HttpStatusCode } from "axios";
 import models from "../models";
 import { OnboardingStepEnum } from "../enums/onboardingStep.enum";
+import { migrateChecklistToNewStructure } from "../helpers/checklistMigration.helper";
 
 // Get checklist for a business
 export async function getBusinessChecklist(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -27,6 +28,15 @@ export async function getBusinessChecklist(req: Request, res: Response, next: Ne
 
 		// Get or create checklist
 		let checklist = await models.checklists.findOne({ businessId });
+		
+		// Apply migration if checklist exists
+		if (checklist) {
+			const hasChanges = await migrateChecklistToNewStructure(checklist);
+			if (hasChanges) {
+				await checklist.save();
+			}
+		}
+		
 		if (!checklist) {
 			checklist = new models.checklists({
 				businessId: new Types.ObjectId(businessId),
@@ -36,23 +46,18 @@ export async function getBusinessChecklist(req: Request, res: Response, next: Ne
 						name: "ON BOARDING",
 						items: [
 							{
-								id: "billing-history",
-								title: "Facturación histórica",
+								id: "business-details",
+								title: "Detalles del negocio",
 								completed: false,
 							},
 							{
-								id: "product-list",
-								title: "Lista de productos",
-								completed: false,
-							},
-							{
-								id: "client-list",
-								title: "Lista de clientes (si aplica)",
+								id: "business-files",
+								title: "Archivos del negocio",
 								completed: false,
 							},
 							{
 								id: "brand-identity",
-								title: "Identidad de marca (Logo, Colores, Tipografía, Ejemplos de Uso)",
+								title: "Identidad de marca",
 								completed: false,
 							},
 						],
@@ -60,21 +65,28 @@ export async function getBusinessChecklist(req: Request, res: Response, next: Ne
 					},
 					{
 						id: "meta-config",
-						name: "TESIS DE COMUNICACIÓN",
+						name: "STAGE 2",
 						items: [
 							{
 								id: "meta-setup",
-								title: "Configuración META (Seteo del portafolio empresarial, cuenta publicitaria, conexión de cuenta fb e IG, y cuenta de WA)",
+								title: "Configuración META (primera reunión)",
 								completed: false,
 							},
 							{
-								id: "taglines",
-								title: "Taglines",
+								id: "data-analysis-stage2",
+								title: "Análisis de datos",
 								completed: false,
 							},
+						],
+						completed: false,
+					},
+					{
+						id: "data-analysis",
+						name: "TESIS DE COMUNICACIÓN",
+						items: [
 							{
-								id: "soundbites",
-								title: "SoundBites",
+								id: "taglines-soundbites",
+								title: "Taglines - Soundbites",
 								completed: false,
 							},
 							{
@@ -83,30 +95,8 @@ export async function getBusinessChecklist(req: Request, res: Response, next: Ne
 								completed: false,
 							},
 							{
-								id: "content-structure",
-								title: "Estructura contenido diario",
-								completed: false,
-							},
-							{
-								id: "planning",
-								title: "Planificaciones",
-								completed: false,
-							},
-						],
-						completed: false,
-					},
-					{
-						id: "data-analysis",
-						name: "ANÁLISIS DE DATOS",
-						items: [
-							{
-								id: "data-analysis-item",
-								title: "Análisis de datos",
-								completed: false,
-							},
-							{
-								id: "strategy-definition",
-								title: "Definición de estrategia",
+								id: "content-planning",
+								title: "Planificación de contenido diario",
 								completed: false,
 							},
 						],
@@ -114,26 +104,16 @@ export async function getBusinessChecklist(req: Request, res: Response, next: Ne
 					},
 					{
 						id: "ads",
-						name: "ADS",
+						name: "STAGE 4",
 						items: [
 							{
-								id: "ad-material",
-								title: "Material para anuncios",
+								id: "marketing-strategy",
+								title: "Estrategia de marketing dirigido a ventas",
 								completed: false,
 							},
 							{
-								id: "ads-config",
-								title: "Configuración Ads",
-								completed: false,
-							},
-							{
-								id: "community-norms",
-								title: "Normas de la comunidad",
-								completed: false,
-							},
-							{
-								id: "ads-activation",
-								title: "Activación de Anuncios",
+								id: "storybrand-platform-sale",
+								title: "Venta de plataforma storybrand",
 								completed: false,
 							},
 						],
@@ -141,26 +121,48 @@ export async function getBusinessChecklist(req: Request, res: Response, next: Ne
 					},
 					{
 						id: "sales-process",
-						name: "PROCESO DE VENTAS",
+						name: "STAGE 5",
 						items: [
 							{
-								id: "video-guides",
-								title: "Guiones para videos de anuncios",
+								id: "ad-scripts",
+								title: "Guiones para anuncios",
 								completed: false,
 							},
 							{
-								id: "wa-sales-guides",
-								title: "Guiones para ventas por WA",
+								id: "ad-materials",
+								title: "Material para anuncios",
+								completed: false,
+							},
+							{
+								id: "community-guidelines",
+								title: "Normas de la comunidad",
+								completed: false,
+							},
+							{
+								id: "ad-activation",
+								title: "Activación de anuncios (aprobado por meta)",
+								completed: false,
+							},
+						],
+						completed: false,
+					},
+					{
+						id: "venta",
+						name: "STAGE 6",
+						items: [
+							{
+								id: "whatsapp-sales-manual",
+								title: "Manual para ventas por whatsapp",
 								completed: false,
 							},
 							{
 								id: "roas-stabilization",
-								title: "Estabilización ROAS=4",
+								title: "Estabilización de roas",
 								completed: false,
 							},
 							{
-								id: "subscription-platform",
-								title: "Entrega de plataforma de suscripción",
+								id: "subscription-platform-delivery",
+								title: "Entrega de plataforma de suscripción y capacitación",
 								completed: false,
 							},
 						],
@@ -262,7 +264,8 @@ export async function updateChecklistItem(req: Request, res: Response, next: Nex
 						OnboardingStepEnum.TESIS_DE_COMUNICACION,
 						OnboardingStepEnum.ANALISIS_DE_DATOS,
 						OnboardingStepEnum.ADS,
-						OnboardingStepEnum.PROCESO_DE_VENTAS
+						OnboardingStepEnum.PROCESO_DE_VENTAS,
+						OnboardingStepEnum.VENTA
 					];
 					
 					if (nextPhaseIndex < onboardingSteps.length) {
@@ -379,6 +382,32 @@ export async function getChecklistProgress(req: Request, res: Response, next: Ne
 		return;
 	} catch (error) {
 		console.error("Error getting checklist progress:", error);
+		next(error);
+	}
+}
+
+// Migrate all existing checklists to new structure
+export async function migrateAllChecklists(req: Request, res: Response, next: NextFunction): Promise<void> {
+	try {
+		const checklists = await models.checklists.find({});
+		let migratedCount = 0;
+
+		for (const checklist of checklists) {
+			const hasChanges = await migrateChecklistToNewStructure(checklist);
+			if (hasChanges) {
+				await checklist.save();
+				migratedCount++;
+			}
+		}
+
+		res.status(HttpStatusCode.Ok).send({
+			message: `Migration completed successfully. ${migratedCount} checklists were updated.`,
+			migratedCount,
+			totalChecklists: checklists.length,
+		});
+		return;
+	} catch (error) {
+		console.error("Error migrating checklists:", error);
 		next(error);
 	}
 }
