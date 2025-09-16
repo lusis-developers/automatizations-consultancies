@@ -1,4 +1,5 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
+import { ClientTypeEnum } from "../enums/clientType.enum";
 
 export interface IClient extends Document {
   name: string;
@@ -8,6 +9,7 @@ export interface IClient extends Document {
   city: string;
   dateOfBirth: Date;
   nationalIdentification?: string;
+  clientType: ClientTypeEnum;
   businesses: Schema.Types.ObjectId[]; // Cambiado a array de referencias
   paymentInfo: {
     preferredMethod: string;
@@ -61,6 +63,11 @@ const ClientSchema: Schema<IClient> = new Schema(
     nationalIdentification: { 
       type: String, 
       trim: true 
+    },
+    clientType: {
+      type: String,
+      enum: Object.values(ClientTypeEnum),
+      required: true,
     },
     businesses: [
       {
