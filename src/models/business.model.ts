@@ -83,6 +83,7 @@ export interface IBusiness extends Document {
 	ruc: string;
 	address: string;
 	businessType: BusinessTypeEnum;
+	valueProposition?: string;
 	phone: string;
 	email: string;
 	managers: IManager[]
@@ -272,6 +273,11 @@ const BusinessSchema = new Schema<IBusiness>(
 			type: String,
 			enum: Object.values(BusinessTypeEnum),
 			required: true
+		},
+		valueProposition: {
+			type: String,
+			required: false,
+			trim: true,
 		},
 		handoffData: {
 			type: handoffDataSchema,
