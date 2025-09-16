@@ -15,6 +15,9 @@ export interface IChecklistPhase {
 	items: IChecklistItem[];
 	completed: boolean;
 	completedAt?: Date;
+	observations?: string;
+	observationsUpdatedAt?: Date;
+	observationsUpdatedBy?: Types.ObjectId;
 }
 
 export interface IChecklist extends Document {
@@ -69,6 +72,17 @@ const checklistPhaseSchema = new Schema<IChecklistPhase>({
 	},
 	completedAt: {
 		type: Date,
+	},
+	observations: {
+		type: String,
+		trim: true,
+	},
+	observationsUpdatedAt: {
+		type: Date,
+	},
+	observationsUpdatedBy: {
+		type: Schema.Types.ObjectId,
+		ref: "User",
 	},
 });
 
