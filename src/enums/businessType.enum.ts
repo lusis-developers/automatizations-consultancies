@@ -31,5 +31,6 @@ export enum BusinessTypeEnum {
   TUTORING_CENTER = "Tutoring Center",
   LANGUAGE_SCHOOL = "Language School",
   MUSIC_SCHOOL = "Music School",
+  UNKNOWN = "Unknown",
   OTHER = "Other"
 }

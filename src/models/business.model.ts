@@ -272,7 +272,8 @@ const BusinessSchema = new Schema<IBusiness>(
 		businessType: {
 			type: String,
 			enum: Object.values(BusinessTypeEnum),
-			required: true
+			required: true,
+			default: BusinessTypeEnum.UNKNOWN
 		},
 		valueProposition: {
 			type: String,
