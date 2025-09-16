@@ -31,6 +31,8 @@ export async function handleManualPayment(
   res: Response,
 ): Promise<void> {
   try {
+    let hasRucConflict = false; // Track RUC conflicts for warning purposes
+    
     const paymentMethodString =
       body.paymentMethod === PayMethod.BANK_TRANSFER
         ? "Transferencia Bancaria"
@@ -94,14 +96,12 @@ export async function handleManualPayment(
         // Use clientId as RUC if provided, otherwise leave undefined to avoid null conflicts
         const rucValue = body.clientId && body.clientId.trim() !== '' ? body.clientId.trim() : undefined;
         
-        // Check if RUC already exists when provided
+        // Check if RUC already exists when provided (for warning purposes only)
         if (rucValue) {
           const existingBusinessWithRuc = await models.business.findOne({ ruc: rucValue });
           if (existingBusinessWithRuc) {
-            res.status(409).json({ 
-              message: `The RUC '${rucValue}' is already registered by another business in the system.` 
-            });
-            return;
+            hasRucConflict = true;
+            console.warn(`[Manual Payment] Warning: Creating business with duplicate RUC: ${rucValue}`);
           }
         }
         
@@ -127,11 +127,32 @@ export async function handleManualPayment(
 
       } catch (error: any) {
         if (error.code === 11000 && error.keyPattern?.ruc) {
-            console.warn(`[Manual Payment] Conflict: Attempted to create a business with duplicate RUC: ${error.keyValue.ruc}`);
-            res.status(409).json({ message: `The RUC '${error.keyValue.ruc}' is already registered by another business in the system.` });
-            return;
+            // Handle duplicate RUC by creating business without RUC and setting conflict flag
+            console.warn(`[Manual Payment] Conflict: Creating business without RUC due to duplicate: ${error.keyValue.ruc}`);
+            hasRucConflict = true;
+            
+            business = await models.business.create({
+              name: body.businessName,
+              businessType: body.businessType,
+              valueProposition: body.valueProposition,
+              owner: cliente._id,
+              ruc: undefined, // Don't set RUC to avoid conflict
+              email: body.email,
+              phone: body.phone,
+              address: "Sin dirección",
+            });
+            wasNewBusinessCreated = true;
+
+            await models.clients.updateOne(
+              { _id: cliente._id },
+              { $push: { businesses: business._id } },
+            );
+
+            const resendService = new ResendEmail();
+            await resendService.sendPoliciesEmail(cliente.name, cliente.email);
+        } else {
+          throw error;
         }
-        throw error;
       }
     }
 
@@ -181,10 +202,16 @@ export async function handleManualPayment(
       Check email for details.`;
     }
 
+    // Add RUC conflict warning if applicable
+    if (hasRucConflict) {
+      responseMessage += ` Warning: The RUC '${body.clientId}' is already registered by another business in the system. This may cause conflicts later.`;
+    }
+
     res.status(200).json({
       message: responseMessage,
       isFirstPayment,
       wasNewBusinessCreated,
+      hasRucConflict,
       transactionId,
       clientId: cliente._id,
       businessId: business?._id,
