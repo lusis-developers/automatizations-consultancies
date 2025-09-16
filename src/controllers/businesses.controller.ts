@@ -36,7 +36,7 @@ export async function receiveConsultancyData(
         __dirname,
         "../credentials/bakano-mvp-generate-content-4618d04c0dde.json",
       ),
-      "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL",
+      "1I_S2kHpinrpdgoW_IHNDsqbaAgUfgXxf",
     );
 
     const business = await models.business.findById(businessId)
@@ -309,7 +309,7 @@ export async function deleteBusinessAndNotifyController(
     try {
       const driveService = new GoogleDriveService(
         path.resolve(__dirname, "../credentials/bakano-mvp-generate-content-4618d04c0dde.json"),
-        "1IXfjJgXD-uWOKPxwKOXiJl_dhp3uBkOL"
+        "1I_S2kHpinrpdgoW_IHNDsqbaAgUfgXxf"
       );
       await driveService.deleteFolderByName(businessName);
     } catch (driveError) {
