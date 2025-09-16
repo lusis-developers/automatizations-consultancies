@@ -4,4 +4,5 @@ export enum OnboardingStepEnum {
   ANALISIS_DE_DATOS = "analisis_de_datos",
   ADS = "ads",
   PROCESO_DE_VENTAS = "proceso_de_ventas",
+  VENTA = "venta",
 }
