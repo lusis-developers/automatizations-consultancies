@@ -225,5 +225,16 @@ export async function migrateChecklistToNewStructure(checklist: any): Promise<bo
 		hasChanges = true;
 	}
 
+	// Ensure all phases have observations fields initialized
+	for (const phase of checklist.phases) {
+		if (phase.observations === undefined) {
+			phase.observations = undefined;
+			phase.observationsUpdatedAt = undefined;
+			phase.observationsUpdatedBy = undefined;
+			// Note: We don't mark hasChanges as true for this since these are optional fields
+			// and adding undefined values doesn't change the document structure significantly
+		}
+	}
+
 	return hasChanges;
 }
