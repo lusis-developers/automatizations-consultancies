@@ -66,17 +66,33 @@ export async function migrateBusinessTypeField(): Promise<void> {
 }
 
 /**
+ * Standalone function to run the migration with database connection
+ * Can be called directly or used in other scripts
+ */
+export async function runBusinessTypeMigration(): Promise<void> {
+  try {
+    // Import and initialize database connection
+    await import("../config/mongo");
+    
+    console.log("🚀 Starting businessType migration...");
+    await migrateBusinessTypeField();
+    console.log("✅ Migration completed successfully");
+  } catch (error) {
+    console.error("❌ Migration failed:", error);
+    throw error;
+  }
+}
+
+/**
  * Run migration immediately when this file is executed directly
  */
 if (require.main === module) {
-  // This allows running the migration as a standalone script
-  import("../config/mongo").then(async () => {
-    try {
-      await migrateBusinessTypeField();
+  runBusinessTypeMigration()
+    .then(() => {
       process.exit(0);
-    } catch (error) {
+    })
+    .catch((error) => {
       console.error("Migration failed:", error);
       process.exit(1);
-    }
-  });
+    });
 }
