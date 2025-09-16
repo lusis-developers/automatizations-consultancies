@@ -2,6 +2,8 @@ import type { Response } from "express";
 import { extractExtras } from "../utils/extractExtras.util";
 import models from "../models";
 import { PaymentStatus } from "../enums/paymentStatus.enum";
+import { ClientTypeEnum } from "../enums/clientType.enum";
+import { BusinessTypeEnum } from "../enums/businessType.enum";
 import ResendEmail from "../services/resend.service";
 
 interface IntentPaymentBody {
@@ -72,6 +74,7 @@ export async function handleIntentPayment(
         city: "No especificada",
         country: body.country || "No especificado",
         nationalIdentification: body.clientID || "",
+        clientType: ClientTypeEnum.MEDIUM,
         paymentInfo: {
           preferredMethod:
             body.typePayment === "TRANSFER"
@@ -136,6 +139,8 @@ export async function handleIntentPayment(
         email: intent.email,
         phone: intent.phone,
         address: "Sin dirección",
+        businessType: BusinessTypeEnum.OTHER,
+        valueProposition: undefined,
         owner: cliente._id,
       });
 
