@@ -386,6 +386,65 @@ export async function getChecklistProgress(req: Request, res: Response, next: Ne
 	}
 }
 
+// Update phase observations
+export async function updatePhaseObservations(req: Request, res: Response, next: NextFunction): Promise<void> {
+	try {
+		const { businessId, phaseId } = req.params;
+		const { observations, updatedBy } = req.body;
+
+		if (!Types.ObjectId.isValid(businessId)) {
+			res.status(HttpStatusCode.BadRequest).send({
+				message: "Invalid business ID format.",
+			});
+			return;
+		}
+
+		if (typeof observations !== "string") {
+			res.status(HttpStatusCode.BadRequest).send({
+				message: "Observations field must be a string.",
+			});
+			return;
+		}
+
+		// Get checklist
+		const checklist = await models.checklists.findOne({ businessId });
+		if (!checklist) {
+			res.status(HttpStatusCode.NotFound).send({
+				message: "Checklist not found for this business.",
+			});
+			return;
+		}
+
+		// Find phase
+		const phase = checklist.phases.find(p => p.id === phaseId);
+		if (!phase) {
+			res.status(HttpStatusCode.NotFound).send({
+				message: "Phase not found.",
+			});
+			return;
+		}
+
+		// Update observations
+		phase.observations = observations.trim() || undefined;
+		phase.observationsUpdatedAt = new Date();
+		
+		if (updatedBy && Types.ObjectId.isValid(updatedBy)) {
+			phase.observationsUpdatedBy = new Types.ObjectId(updatedBy);
+		}
+
+		await checklist.save();
+
+		res.status(HttpStatusCode.Ok).send({
+			message: "Phase observations updated successfully.",
+			checklist,
+		});
+		return;
+	} catch (error) {
+		console.error("Error updating phase observations:", error);
+		next(error);
+	}
+}
+
 // Migrate all existing checklists to new structure
 export async function migrateAllChecklists(req: Request, res: Response, next: NextFunction): Promise<void> {
 	try {
