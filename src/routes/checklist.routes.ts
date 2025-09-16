@@ -1,5 +1,5 @@
 import express from "express";
-import { getBusinessChecklist, updateChecklistItem, moveToNextPhase, getChecklistProgress } from "../controllers/checklist.controller";
+import { getBusinessChecklist, updateChecklistItem, moveToNextPhase, getChecklistProgress, updatePhaseObservations } from "../controllers/checklist.controller";
 
 const router = express.Router();
 
@@ -25,6 +25,12 @@ router.patch(
 router.post(
 	"/checklist/:businessId/next-phase",
 	moveToNextPhase
+);
+
+// Update phase observations
+router.patch(
+	"/checklist/:businessId/phase/:phaseId/observations",
+	updatePhaseObservations
 );
 
 export default router;
