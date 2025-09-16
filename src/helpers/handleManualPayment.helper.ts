@@ -2,6 +2,7 @@ import { Response } from "express";
 import models from "../models";
 import ResendEmail from "../services/resend.service";
 import { BusinessTypeEnum } from "../enums/businessType.enum";
+import { ClientTypeEnum } from "../enums/clientType.enum";
 
 export enum PayMethod {
   PAGOPLUX = "pagoplux",
@@ -20,6 +21,8 @@ export interface ManualPaymentBody {
   bank?: string;
   businessName: string;
   businessType: BusinessTypeEnum;
+  clientType?: ClientTypeEnum;
+  valueProposition?: string;
   paymentMethod: PayMethod;
 }
 
@@ -54,6 +57,7 @@ export async function handleManualPayment(
         city: "No especificada",
         nationalIdentification: body.clientId || "",
         country: body.country || "No especificado",
+        clientType: body.clientType || ClientTypeEnum.MEDIUM,
         paymentInfo: {
           preferredMethod: paymentMethodString,
           lastPaymentDate: new Date(),
@@ -104,6 +108,7 @@ export async function handleManualPayment(
         business = await models.business.create({
           name: body.businessName,
           businessType: body.businessType,
+          valueProposition: body.valueProposition,
           owner: cliente._id,
           ruc: rucValue,
           email: body.email,
