@@ -30,17 +30,17 @@ export class GoogleDriveService {
   }
 
   async ensureSubfolder(name: string): Promise<string> {
-    // Buscar si ya existe una carpeta con ese nombre dentro del folder principal
     const res = await this.driveClient.files.list({
       q: `'${this.parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${name}' and trashed = false`,
       fields: "files(id, name)",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
 
     if (res.data.files.length > 0) {
       return res.data.files[0].id;
     }
 
-    // Si no existe, crearla
     const fileMetadata = {
       name,
       mimeType: "application/vnd.google-apps.folder",
@@ -50,6 +50,7 @@ export class GoogleDriveService {
     const folder = await this.driveClient.files.create({
       requestBody: fileMetadata,
       fields: "id",
+      supportsAllDrives: true,
     });
 
     return folder.data.id;
@@ -74,6 +75,7 @@ export class GoogleDriveService {
       requestBody: fileMetadata,
       media,
       fields: "id",
+      supportsAllDrives: true,
     });
 
     const fileId = file.data.id;
@@ -84,26 +86,25 @@ export class GoogleDriveService {
         role: "reader",
         type: "anyone",
       },
+      supportsAllDrives: true,
     });
 
     const result = await this.driveClient.files.get({
       fileId,
       fields: "webViewLink",
+      supportsAllDrives: true,
     });
 
     return result.data.webViewLink;
   }
 
-  /**
-   * Busca y elimina una subcarpeta por su nombre dentro de la carpeta principal.
-   * Si la carpeta no se encuentra, no hace nada.
-   * @param folderName - El nombre de la carpeta a eliminar.
-   */
   async deleteFolderByName(folderName: string): Promise<void> {
     try {
       const res = await this.driveClient.files.list({
         q: `'${this.parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${folderName}' and trashed = false`,
         fields: "files(id)",
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
       });
 
       if (res.data.files.length === 0) {
@@ -115,13 +116,13 @@ export class GoogleDriveService {
 
       await this.driveClient.files.delete({
         fileId: folderId,
+        supportsAllDrives: true,
       });
 
       console.log(`[Google Drive] La carpeta '${folderName}' (ID: ${folderId}) y todo su contenido han sido eliminados correctamente.`);
 
     } catch (error) {
       console.error(`[Google Drive] Error al intentar eliminar la carpeta '${folderName}':`, error);
-      // throw new Error(`Failed to delete Drive folder: ${error.message}`);
     }
   }
 }
