@@ -121,9 +121,12 @@ export interface IBusiness extends Document {
 	brandTypographyName?: string;
 	brandTypographyPath?: string;
 	brandUsageExamplesPath?: string;
-
-	// Checklist Reference
+	// Checklist reference
 	checklistId?: Types.ObjectId;
+	// Consultancy-specific fields
+	serviceType?: string; // Tipo de servicio
+	monthlyTransactions?: string; // Transacciones al mes
+	serviceDescription?: string; // Descripción de servicios
 }
 
 const BusinessSchema = new Schema<IBusiness>(
@@ -321,6 +324,22 @@ const BusinessSchema = new Schema<IBusiness>(
 			type: Schema.Types.ObjectId,
 			ref: "Checklist",
 			required: false,
+		},
+		// Consultancy-specific fields
+		serviceType: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		monthlyTransactions: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		serviceDescription: {
+			type: String,
+			required: false,
+			trim: true,
 		},
 	},
 	{
