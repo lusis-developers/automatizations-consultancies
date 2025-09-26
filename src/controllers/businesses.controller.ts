@@ -79,9 +79,6 @@ export async function receiveConsultancyData(
     if (req.body.serviceType) {
       updatePayload.serviceType = req.body.serviceType;
     }
-    if (req.body.monthlyTransactions) {
-      updatePayload.monthlyTransactions = req.body.monthlyTransactions;
-    }
     if (req.body.serviceDescription) {
       updatePayload.serviceDescription = req.body.serviceDescription;
     }
@@ -102,6 +99,8 @@ export async function receiveConsultancyData(
           updatePayload.brandTypographyPath = driveUrl;
         } else if (file.fieldname === 'brandUsageExamples') {
           updatePayload.brandUsageExamplesPath = driveUrl;
+        } else if (file.fieldname === 'monthlyTransactions') {
+          updatePayload.monthlyTransactionsPath = driveUrl;
         } else {
           updatePayload[`${file.fieldname}Path`] = driveUrl;
         }
