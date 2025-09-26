@@ -125,7 +125,7 @@ export interface IBusiness extends Document {
 	checklistId?: Types.ObjectId;
 	// Consultancy-specific fields
 	serviceType?: string; // Tipo de servicio
-	monthlyTransactions?: string; // Transacciones al mes
+	monthlyTransactionsPath?: string; // Archivo de transacciones al mes
 	serviceDescription?: string; // Descripción de servicios
 }
 
@@ -331,7 +331,7 @@ const BusinessSchema = new Schema<IBusiness>(
 			required: false,
 			trim: true,
 		},
-		monthlyTransactions: {
+		monthlyTransactionsPath: {
 			type: String,
 			required: false,
 			trim: true,
