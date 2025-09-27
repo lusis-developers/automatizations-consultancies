@@ -93,14 +93,14 @@ export async function receiveConsultancyData(
 
         if (file.fieldname === 'menuRestaurante') {
           newMenuUrls.push(driveUrl);
+        } else if (file.fieldname === 'monthlyTransactions') {
+          updatePayload.monthlyTransactionsPathPath = driveUrl;
         } else if (file.fieldname === 'brandLogo') {
           updatePayload.brandLogoPath = driveUrl;
         } else if (file.fieldname === 'brandTypography') {
           updatePayload.brandTypographyPath = driveUrl;
         } else if (file.fieldname === 'brandUsageExamples') {
           updatePayload.brandUsageExamplesPath = driveUrl;
-        } else if (file.fieldname === 'monthlyTransactions') {
-          updatePayload.monthlyTransactionsPath = driveUrl;
         } else {
           updatePayload[`${file.fieldname}Path`] = driveUrl;
         }

@@ -126,6 +126,7 @@ export interface IBusiness extends Document {
 	// Consultancy-specific fields
 	serviceType?: string; // Tipo de servicio
 	monthlyTransactionsPath?: string; // Archivo de transacciones al mes
+	monthlyTransactionsPathPath?: string; // Temporary field for compatibility
 	serviceDescription?: string; // Descripción de servicios
 }
 
@@ -332,6 +333,11 @@ const BusinessSchema = new Schema<IBusiness>(
 			trim: true,
 		},
 		monthlyTransactionsPath: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		monthlyTransactionsPathPath: {
 			type: String,
 			required: false,
 			trim: true,
